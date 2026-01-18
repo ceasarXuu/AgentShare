@@ -1,23 +1,30 @@
-# NBResearcher - 商业机会研究员 Agent
+# NBResearcher - 好生意评估顾问
 
-> 面向独立开发者与小团队,快速找到最值得做的 App/软件产品方向
+> 帮助独立开发者和小团队快速判断产品方向是否值得做
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 📋 项目简介
 
-NBResearcher 是一个基于 AI 的商业机会研究员 Agent,专注于移动应用市场调研和产品机会分析。它能够:
+NBResearcher 是一个专业的**好生意评估顾问 Agent**,专注于帮助个人开发者和小团队:
 
-- 🔍 **多源信息检索**: 自动从 Reddit、X、YouTube、App Store 等平台收集用户反馈
-- 📊 **数据驱动分析**: 痛点聚类、市场规模估算、竞品分析
-- 📝 **结构化输出**: 生成专业的研究报告和 MVP 建议
-- ⚡ **快速验证**: 1-3 天快速判断产品想法,或 10-15 天完整调研
+- 🛡️ **风险优先评估**: 三道防火墙机制,快速识别致命风险
+- 📊 **七维度评估模型**: 责任风险、成本结构、收益模型等全方位评估
+- ⚡ **快速决策**: 30分钟快速评估,明确"做/不做"建议
+- 📝 **结构化输出**: 完整的评估报告和行动计划
+
+### 什么是"好生意"
+
+```
+好生意 = 合理的成本 × 可预期的收益 × 可承受的风险 × 可控的复杂度 × 可持续的运营
+```
 
 ## 🎯 核心原则
 
-1. **只相信行为,不相信观点** - 搜索量、付费行为、真实吐槽 > 媒体报道
-2. **三角验证法则** - 任何结论必须有 3 个独立来源支撑
-3. **自下而上建模** - 从具体可执行路径推导,而非从宏大市场倒推
+1. **保守估计收益,悲观估计成本** - 收益打5折,成本加50%
+2. **先看风险,再看收益** - 评估最坏情况能否承受
+3. **只相信行为,不相信观点** - 付费行为 > 媒体报道
+4. **三角验证法则** - 任何结论必须有3个独立来源支撑
 
 ---
 
@@ -25,89 +32,86 @@ NBResearcher 是一个基于 AI 的商业机会研究员 Agent,专注于移动�
 
 ### 1. 部署 Agent
 
-本项目使用通用的部署脚本。请在 **项目根目录** (`NBAgents/`) 运行：
+在项目根目录 (`NBAgents/`) 运行：
 
 ```bash
 ./deploy.sh
 ```
 
-根据提示选择 `NBResearcher` (输入对应数字)。脚本会自动：
-- 部署 `opencode.json` (包含 Agent 专属配置) 到 OpenCode。
-- 部署 Agent 定义、Skills 和工作流。
-
-**手动部署 (备选)**:
-如果无法使用脚本，可手动将 `opencode.json` 复制到 config 目录，并将 `nbresearcher.md` 复制到 agents 目录。
+选择 `NBResearcher`,脚本会自动部署配置和 Skills。
 
 ### 2. 配置环境
 
-在使用前，您需要配置必要的 API 密钥。在 `NBAgents` 根目录创建 `.env` 文件：
+在 `NBAgents` 根目录创建 `.env` 文件：
 
 ```bash
-# GitHub 访问令牌 (必需，用于搜索开源项目)
 export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
-
-# Brave Search API 密钥 (必需，用于联网搜索)
-# 获取方式: https://brave.com/search/api/
 export BRAVE_API_KEY="BSAxxxxxxxxxxxx"
-
-# 可选: 其他 AI 模型密钥 (Anthropic/OpenAI 等)
 ```
 
-然后加载环境变量：
-```bash
-source .env
-```
+然后加载：`source .env`
 
 ---
 
 ## 💡 使用指南
 
-### 方式 1: OpenCode (推荐)
+### 好生意快速评估 (30分钟) 🆕
 
-启动 OpenCode 后：
+最快速的评估方式,快速判断是否值得深入:
 
-- **选择 Agent**: 输入 `/agent` 并选择 `NBResearcher`。
-- **直接指定**: 输入 `/agent NBResearcher`。
-
-**常用指令**:
-```bash
-# 检查 Skills 状态
-请列出所有可用的 Skills
-
-# 开始研究
-我想研究 [产品想法],请帮我分析市场机会。
+```
+请使用 /good-business-assessment 工作流评估 [产品想法]
 ```
 
-### 方式 2: Claude Code
+**输出**: 三道防火墙结果 + 快速评分 + 做/不做建议
 
-在终端运行：
-```bash
-claude --agent nbresearcher
+### 七维度详细评估 (2-3小时) 🆕
+
+通过快速评估后的深度分析:
+
+```
+请使用 /detailed-evaluation 工作流评估 [产品想法]
+```
+
+**输出**: 七维度评分卡 + 风险分析 + 成本收益分析 + 行动计划
+
+### 快速验证 (1-3天)
+
+痛点验证 + 市场规模 + 竞品扫描:
+
+```
+请使用 /quick-validation 工作流验证 [产品想法]
+```
+
+### 完整调研 (10-15天)
+
+深度调研,5个阶段全覆盖:
+
+```
+请使用 /research-workflow 工作流研究 [产品想法]
 ```
 
 ---
 
-## 📊 工作流与 Skills
+## 📊 核心能力
 
-### 核心工作流
+### 三道防火墙
 
-NBResearcher 提供了 3 个标准工作流：
+1. **致命风险检查** (一票否决): 人身安全、财产损失、法律风险
+2. **基本可行性检查**: 启动成本<50万、3个月内MVP
+3. **个人适配性检查**: 动机、经验、风险承受力
 
-1.  **快速验证 (1-3天)**: 适用于快速判断想法可行性。
-    *   *指令*: `请使用快速验证工作流分析 [产品想法]`
-2.  **完整调研 (10-15天)**: 深度分析，包含痛点发现、市场验证、竞品深挖等 5 个阶段。
-    *   *指令*: `请使用完整调研工作流对 [产品想法] 进行深度研究`
-3.  **竞品分析**: 专注于竞品格局、功能对比和定价策略。
-    *   *指令*: `请使用竞品分析工作流分析 [产品类别]`
+### 七维度评估
 
-### 核心 Skills (部分)
-
-Agent 内置了 20+ 个专业技能模块：
-
-*   **🔍 信息获取**: `web-scraping` (网页抓取), `search-strategy` (搜索策略优化)
-*   **📈 市场分析**: `data-analysis` (数据分析), `market-sizing` (市场规模估算), `trend-analysis` (趋势分析)
-*   **⚔️ 竞品研究**: `competitive-gap-analysis` (竞品差距分析), `competitor-tracking` (竞品监控)
-*   **📝 输出**: `report-generation` (报告生成), `decision-and-mvp` (MVP 定义)
+| 维度 | 权重 | 说明 |
+|------|------|------|
+| 责任与风险 | ⭐⭐⭐ | 最坏情况能否承受 |
+| 成本结构 | ⭐⭐⭐ | 启动成本、盈亏平衡 |
+| 收益模型 | ⭐⭐⭐ | 付费先例、收入预测 |
+| 技术复杂度 | ⭐⭐ | 开发难度、技术风险 |
+| 运营负担 | ⭐⭐ | 是否需要24/7待命 |
+| 市场与竞争 | ⭐⭐ | 市场规模、差异化 |
+| 可扩展性 | ⭐ | 增长潜力 |
 
 ---
 
@@ -115,27 +119,36 @@ Agent 内置了 20+ 个专业技能模块：
 
 ```
 NBResearcher/
-├── opencode.json           # Agent 专属 OpenCode 配置
-├── docs/                   # 方法论文档与报告模板
-├── SKILLS/                 # 20+ 个技能模块源码
-├── .agent/workflows/       # 工作流定义文件 (.md)
 ├── nbresearcher.md         # Agent 定义文件
-├── README.md               # 本文件
-└── ...
+├── opencode.json           # MCP 工具配置
+├── SKILLS/                 # 26个技能模块
+│   ├── business-opportunity-assessment/  # 七维度评估 🆕
+│   ├── three-firewall-check/             # 三道防火墙 🆕
+│   ├── cost-structure-analysis/          # 成本分析 🆕
+│   ├── revenue-model-validation/         # 收益验证 🆕
+│   └── ...
+├── .agent/workflows/       # 工作流定义
+│   ├── good-business-assessment.md       # 快速评估 🆕
+│   ├── detailed-evaluation.md            # 详细评估 🆕
+│   └── ...
+├── docs/
+│   ├── 好生意.md           # 方法论文档
+│   └── 报告模板/           # 评估报告模板 🆕
+└── README.md
 ```
 
 ---
 
 ## 🔧 常见问题
 
+**Q: 评估结论是"不建议做",但我很想做怎么办?**
+A: 诚实面对风险。可以调整产品定位规避核心风险后重新评估。
+
+**Q: 总分刚好及格(21分),应该做吗?**
+A: 可以做,但需要持续优化。关注得分最低的维度,并设置明确的止损线。
+
 **Q: MCP 工具无法连接?**
-A: 检查 `opencode.json` 配置是否生效，确认 `.env` 中 `GITHUB_TOKEN` 和 `BRAVE_API_KEY` 已正确设置。
-
-**Q: 数据库在哪里?**
-A: 默认位于 `agents/NBResearcher/data/research_data.db`。
-
-**Q: 如何自定义配置?**
-A: 修改本目录下的 `opencode.json`，然后重新运行根目录的 `./deploy.sh`。
+A: 检查 `.env` 中 `GITHUB_TOKEN` 和 `BRAVE_API_KEY` 是否正确设置。
 
 ---
 
