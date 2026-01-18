@@ -33,3 +33,17 @@ coverage/
 # Archives
 *.zip
 *.tar.gz
+
+# Agent configurations with secrets
+opencode.local.json
+.opencode/local/
+.env.local
+
+# Research outputs
+/research_output/
+/reports/
+*.research.md
+
+# Temporary data
+/temp/
+/cache/
