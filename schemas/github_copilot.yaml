@@ -1,0 +1,38 @@
+# GitHub Copilot (VS Code) Platform Schema
+# 定义如何从统一 Agent 定义生成 GitHub Copilot 专用格式
+
+name: github_copilot
+display_name: GitHub Copilot (VS Code)
+
+# 目标目录检测
+target_detection:
+  paths:
+    - ~/Library/Application Support/Code/User/prompts  # macOS
+    - ~/.config/Code/User/prompts                       # Linux
+    # Windows: %APPDATA%/Code/User/prompts
+
+# 部署后是否需要重启
+requires_restart: false
+
+# 输出配置
+outputs:
+  # 1. Agent 定义文件
+  agent_definition:
+    target: "{agent_name}.agent.md"
+    format: markdown_with_frontmatter
+    frontmatter:
+      - name
+      - description
+      - tools: platforms.github_copilot.tools
+    include_body: true
+    
+  # 2. Skills 目录
+  skills:
+    source: skills/
+    target: ~/.github/skills  # 用户指定路径
+    type: directory
+
+# 支持的功能
+features:
+  - tools
+  - skills

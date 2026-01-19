@@ -1,0 +1,47 @@
+# Claude Code Platform Schema
+# 定义如何从统一 Agent 定义生成 Claude Code 专用格式
+
+name: claude_code
+display_name: Claude Code
+
+# 目标目录检测
+target_detection:
+  paths:
+    - ~/.claude
+    - ~/.config/claude
+    - ~/Library/Application Support/Claude
+
+# 部署后是否需要重启
+requires_restart: true
+
+# 输出配置
+outputs:
+  # 1. Agent 定义文件
+  agent_definition:
+    target: agents/{agent_name}.md
+    format: markdown_with_frontmatter
+    frontmatter:
+      - name
+      - description
+      - tools: platforms.claude_code.tools
+      - model: platforms.claude_code.model
+    include_body: true
+
+  # 2. Skills 目录
+  skills:
+    source: skills/
+    target: ~/.claude/skills  # 用户指定路径
+    type: directory
+    
+  # 3. 文档目录
+  docs:
+    source: docs/
+    target: "{agent_name}_docs/"
+    type: directory
+    optional: true
+
+# 支持的功能
+features:
+  - tools
+  - skills
+  - docs
