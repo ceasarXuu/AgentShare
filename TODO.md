@@ -6,3 +6,18 @@
   - [x] 询问用户接下来的操作：
     - (1) 部署 Agent：将当前项目中的 Agent 部署到本地的 opencode 和 claude code
     - (2) 提取 Agent：将用户已安装的 Agent 按照 AgentShare 规范复制到当前项目，实现跨平台共享 
+
+
+## 多系统平台支持扩展
+- [x] 支持 windows 安装本项目
+
+## 多 Agent 平台支持
+- VS Code IDE
+  - [ ] VS Code Agent 入口支持
+
+
+- TRAE IDE（海外版，不是 TRAE CN）
+  - [ ] TRAE Agent 入口支持
+  - [ ] IDE 中的 opencode  插件 Agent 支持
+  - [ ] IDE 中的 cline 插件 Agent 支持
+  - [ ] IDE 中的 kilo code 插件 Agent 支持
