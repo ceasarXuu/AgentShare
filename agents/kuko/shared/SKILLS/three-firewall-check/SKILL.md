@@ -400,6 +400,6 @@ A: 这是最危险的情况,强烈建议:
 
 ## 参考文档
 
-- `agents/NBResearcher/docs/好生意.md` - 完整方法论
-- `agents/NBResearcher/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
-- `agents/NBResearcher/SKILLS/responsibility-risk-assessment/SKILL.md` - 责任风险深度评估
+- `agents/kuko/docs/好生意.md` - 完整方法论
+- `agents/kuko/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
+- `agents/kuko/SKILLS/responsibility-risk-assessment/SKILL.md` - 责任风险深度评估

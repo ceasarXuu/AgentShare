@@ -1,6 +1,35 @@
-# API 密钥配置说明
+# NBAgents - 多智能体系统
 
-## 快速理解
+该项目托管了多个专用的 AI Agent。目前的 Agent 列表如下：
+
+## 可用的 Agents
+
+### 1. [kuko](agents/kuko/README.md)
+**商业机会研究员**
+面向独立开发者与小团队，目标是在有限时间内快速找到当下最值得做的 App/软件产品方向，并把机会从"想法"推进到"可验证的方案"。
+
+---
+
+## 目录结构
+
+- `agents/`: 存放所有 Agent 的目录
+  - `kuko/`: 商业机会研究员 Agent
+    - `opencode/`: OpenCode 平台配置
+    - `claude/`: Claude Code 平台配置
+    - `shared/`: 共享资源 (Skills, Workflows, Docs)
+
+---
+
+## 快速开始
+
+### 使用 kuko
+1. 确保已安装 OpenCode。
+2. 配置 `.env` 文件（参考 `agents/kuko/.env.example`）。
+3. 选择 kuko Agent 并开始对话。
+
+---
+
+## API 密钥配置说明
 
 ### 需要配置的 API 密钥
 
@@ -11,7 +40,7 @@
 
 ### 不需要配置的 API 密钥
 
-以下 AI 模型的 API 密钥**不需要**在这里配置,因为它们由 OpenCode/Claude Code 统一管理:
+以下 AI 模型的 API 密钥**不需要**在 `.env` 中配置,因为它们由 OpenCode/Claude Code 统一管理:
 
 - ❌ ANTHROPIC_API_KEY (Claude 模型)
 - ❌ OPENAI_API_KEY (GPT 模型)
@@ -104,7 +133,7 @@ BSAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ### 1. 创建 .env 文件
 
 ```bash
-cd /Users/xuzhang/AgentShare/agents/kuko
+cd agents/kuko
 cp .env.example .env
 ```
 
@@ -250,6 +279,5 @@ source .env
 
 ## 相关文档
 
-- [.env.example](.env.example) - 环境变量配置示例
-- [CLAUDE.md](CLAUDE.md) - 项目配置说明
-- [README.md](README.md) - 项目主文档
+- [AGENT_SPEC_zh.md](AGENT_SPEC_zh.md) - Agent 设计与开发规范
+- [agents/kuko/README.md](agents/kuko/README.md) - kuko Agent 文档

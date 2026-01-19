@@ -26,7 +26,7 @@ description: 快速验证产品想法 (1-3天)
 
 在开始验证前,先执行三道防火墙检查:
 
-使用 `agents/NBResearcher/SKILLS/three-firewall-check/SKILL.md`
+使用 `agents/kuko/SKILLS/three-firewall-check/SKILL.md`
 
 1. **致命风险检查**: 涉及人身安全/财产损失/法律风险? → 任一项是则终止
 2. **基本可行性检查**: 6个月内<50万启动? 3个月内MVP? → 2个以上否则终止

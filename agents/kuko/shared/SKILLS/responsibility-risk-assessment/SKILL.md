@@ -407,7 +407,7 @@ description: 责任与风险专项评估 - 深度评估人身安全、财产损�
 
 ## 参考文档
 
-- `agents/NBResearcher/docs/好生意.md` - 方法论详细说明
-- `agents/NBResearcher/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
-- `agents/NBResearcher/SKILLS/three-firewall-check/SKILL.md` - 三道防火墙
-- `agents/NBResearcher/SKILLS/risk-assessment/SKILL.md` - 通用风险评估
+- `agents/kuko/docs/好生意.md` - 方法论详细说明
+- `agents/kuko/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
+- `agents/kuko/SKILLS/three-firewall-check/SKILL.md` - 三道防火墙
+- `agents/kuko/SKILLS/risk-assessment/SKILL.md` - 通用风险评估

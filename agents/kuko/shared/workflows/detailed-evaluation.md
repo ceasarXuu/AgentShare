@@ -23,7 +23,7 @@ description: 七维度详细评估工作流(2-3小时) - 深度评估商业机�
 
 ### Step 2: 维度1 - 责任与风险评估 (20分钟)
 
-使用 `agents/NBResearcher/SKILLS/responsibility-risk-assessment/SKILL.md`
+使用 `agents/kuko/SKILLS/responsibility-risk-assessment/SKILL.md`
 
 **评估五类风险**:
 1. 人身安全风险
@@ -38,7 +38,7 @@ description: 七维度详细评估工作流(2-3小时) - 深度评估商业机�
 
 ### Step 3: 维度2 - 成本结构分析 (25分钟)
 
-使用 `agents/NBResearcher/SKILLS/cost-structure-analysis/SKILL.md`
+使用 `agents/kuko/SKILLS/cost-structure-analysis/SKILL.md`
 
 **分析内容**:
 - 启动成本拆解
@@ -56,7 +56,7 @@ description: 七维度详细评估工作流(2-3小时) - 深度评估商业机�
 
 ### Step 4: 维度3 - 收益模型验证 (25分钟)
 
-使用 `agents/NBResearcher/SKILLS/revenue-model-validation/SKILL.md`
+使用 `agents/kuko/SKILLS/revenue-model-validation/SKILL.md`
 
 **分析内容**:
 - 收入来源评估
@@ -74,7 +74,7 @@ description: 七维度详细评估工作流(2-3小时) - 深度评估商业机�
 
 ### Step 5: 维度4 - 技术复杂度评估 (15分钟)
 
-使用 `agents/NBResearcher/SKILLS/business-opportunity-assessment/SKILL.md` 中的技术评估部分
+使用 `agents/kuko/SKILLS/business-opportunity-assessment/SKILL.md` 中的技术评估部分
 
 **评估内容**:
 - 技术模块难度评估
@@ -88,7 +88,7 @@ description: 七维度详细评估工作流(2-3小时) - 深度评估商业机�
 
 ### Step 6: 维度5 - 运营负担分析 (20分钟)
 
-使用 `agents/NBResearcher/SKILLS/operation-burden-analysis/SKILL.md`
+使用 `agents/kuko/SKILLS/operation-burden-analysis/SKILL.md`
 
 **分析内容**:
 - 日常运营任务清单
@@ -106,8 +106,8 @@ description: 七维度详细评估工作流(2-3小时) - 深度评估商业机�
 ### Step 7: 维度6 - 市场与竞争分析 (25分钟)
 
 使用现有 Skills:
-- `agents/NBResearcher/SKILLS/market-sizing/SKILL.md`
-- `agents/NBResearcher/SKILLS/competitive-gap-analysis/SKILL.md`
+- `agents/kuko/SKILLS/market-sizing/SKILL.md`
+- `agents/kuko/SKILLS/competitive-gap-analysis/SKILL.md`
 
 **分析内容**:
 - 市场规模(TAM/SAM/SOM)

@@ -298,7 +298,7 @@ description: 成本结构深度分析 - 评估启动成本、固定成本、变�
 
 ## 使用示例
 
-作为 NBResearcher,在评估项目时:
+作为 kuko,在评估项目时:
 
 1. 收集成本相关信息
 2. 分类计算三类成本
@@ -317,6 +317,6 @@ description: 成本结构深度分析 - 评估启动成本、固定成本、变�
 
 ## 参考文档
 
-- `agents/NBResearcher/docs/好生意.md` - 方法论详细说明
-- `agents/NBResearcher/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
-- `agents/NBResearcher/SKILLS/unit-economics-modeling/SKILL.md` - 单位经济模型
+- `agents/kuko/docs/好生意.md` - 方法论详细说明
+- `agents/kuko/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
+- `agents/kuko/SKILLS/unit-economics-modeling/SKILL.md` - 单位经济模型

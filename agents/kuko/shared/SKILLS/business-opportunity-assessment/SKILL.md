@@ -359,7 +359,7 @@ LTV/CAC 比率: ______
 ## 使用示例
 
 ```
-作为 NBResearcher,当用户要求评估一个产品 idea 时:
+作为 kuko,当用户要求评估一个产品 idea 时:
 
 1. 确认已通过"三道防火墙"检查
 2. 逐个维度收集信息并评分
@@ -379,7 +379,7 @@ LTV/CAC 比率: ______
 
 ## 参考文档
 
-- `agents/NBResearcher/docs/好生意.md` - 完整方法论
-- `agents/NBResearcher/SKILLS/three-firewall-check/SKILL.md` - 前置检查
-- `agents/NBResearcher/SKILLS/cost-structure-analysis/SKILL.md` - 成本深度分析
-- `agents/NBResearcher/SKILLS/revenue-model-validation/SKILL.md` - 收益模型验证
+- `agents/kuko/docs/好生意.md` - 完整方法论
+- `agents/kuko/SKILLS/three-firewall-check/SKILL.md` - 前置检查
+- `agents/kuko/SKILLS/cost-structure-analysis/SKILL.md` - 成本深度分析
+- `agents/kuko/SKILLS/revenue-model-validation/SKILL.md` - 收益模型验证

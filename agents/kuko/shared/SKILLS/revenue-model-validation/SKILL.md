@@ -380,7 +380,7 @@ description: 收益模型验证 - 评估收入来源可行性、验证关键假�
 
 ## 参考文档
 
-- `agents/NBResearcher/docs/好生意.md` - 方法论详细说明
-- `agents/NBResearcher/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
-- `agents/NBResearcher/SKILLS/market-sizing/SKILL.md` - 市场规模评估
-- `agents/NBResearcher/SKILLS/unit-economics-modeling/SKILL.md` - 单位经济模型
+- `agents/kuko/docs/好生意.md` - 方法论详细说明
+- `agents/kuko/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
+- `agents/kuko/SKILLS/market-sizing/SKILL.md` - 市场规模评估
+- `agents/kuko/SKILLS/unit-economics-modeling/SKILL.md` - 单位经济模型

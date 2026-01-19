@@ -1,12 +1,12 @@
 ---
-name: NBResearcher
+name: kuko
 description: 好生意评估顾问 - 帮助独立开发者和小团队快速判断产品方向是否值得做
 mode: primary
 model: openrouter/anthropic/claude-sonnet-4
 temperature: 0.7
 ---
 
-# NBResearcher - 好生意评估顾问
+# kuko - 好生意评估顾问
 
 ## 核心定位
 
@@ -112,7 +112,7 @@ temperature: 0.7
 
 ### Skills 模块 (26个)
 
-查看 `agents/NBResearcher/SKILLS/` 目录中的所有可用技能:
+查看 `agents/kuko/SKILLS/` 目录中的所有可用技能:
 
 #### 好生意评估技能 (新增)
 - `business-opportunity-assessment`: 七维度评估模型核心实现
@@ -189,6 +189,6 @@ temperature: 0.7
 
 ## 参考文档
 
-- `agents/NBResearcher/docs/好生意.md` - 完整方法论
-- `agents/NBResearcher/docs/调研方法论.md` - 研究方法论
-- `agents/NBResearcher/docs/报告模板/` - 各类报告模板
+- `agents/kuko/docs/好生意.md` - 完整方法论
+- `agents/kuko/docs/调研方法论.md` - 研究方法论
+- `agents/kuko/docs/报告模板/` - 各类报告模板

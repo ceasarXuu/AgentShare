@@ -1,4 +1,4 @@
-# NBResearcher - 商业机会研究员 Agent
+# kuko - 商业机会研究员 Agent
 
 ## 项目概述
 
@@ -13,7 +13,7 @@
 ## 项目结构
 
 ```
-NBResearcher/
+kuko/
 ├── docs/                      # 文档和方法论
 │   ├── PRD.md                # 产品需求文档
 │   ├── 调研方法论.md          # 完整的7阶段调研方法论
@@ -92,7 +92,7 @@ NBResearcher/
 ### 数据库 - SQLite
 ```bash
 # 用于存储和查询研究数据
-# 数据库位置: /Users/xuzhang/NBResearcher/research_data.db
+# 数据库位置: /Users/xuzhang/AgentShare/agents/kuko/data/research_data.db
 # 示例: 存储竞品数据
 将竞品信息存储到 SQLite 数据库中
 ```

@@ -1,2 +1,0 @@
-- 该项目是一个多 Agent 的集合，用于开发各种 AI Agent 
-- 当需要创建/修改 Agent 时，必须遵守 AGNET_SPEC.md 中的规范

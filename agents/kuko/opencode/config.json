@@ -63,7 +63,7 @@
         "-y",
         "@modelcontextprotocol/server-sqlite",
         "--db-path",
-        "/Users/xuzhang/NBAgents/agents/NBResearcher/data/research_data.db"
+        "/Users/xuzhang/AgentShare/agents/kuko/data/research_data.db"
       ]
     }
   }

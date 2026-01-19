@@ -98,52 +98,79 @@ deploy_agent() {
     if [ -n "$opencode_dir" ]; then
         echo -e "${BLUE}ℹ️  部署到 OpenCode: $opencode_dir${NC}"
         
-        # 1. 复制 Agent 专属配置 opencode.json
-        if [ -f "$agent_dir/opencode.json" ]; then
+        # 1. 复制 Agent 专属配置
+        if [ -f "$agent_dir/opencode/config.json" ]; then
+            cp "$agent_dir/opencode/config.json" "$opencode_dir/opencode.json"
+            echo -e "${GREEN}✅ 已部署 Agent 专属配置: config.json${NC}"
+        elif [ -f "$agent_dir/opencode.json" ]; then
+            # 向后兼容
             cp "$agent_dir/opencode.json" "$opencode_dir/opencode.json"
-            echo -e "${GREEN}✅ 已部署 Agent 专属配置: opencode.json${NC}"
+            echo -e "${GREEN}✅ 已部署 Agent 专属配置: opencode.json (旧结构)${NC}"
         else
-            echo -e "${YELLOW}⚠️  该 Agent 没有 opencode.json，将使用 OpenCode 默认配置或保留现有配置${NC}"
+            echo -e "${YELLOW}⚠️  该 Agent 没有配置文件，将使用 OpenCode 默认配置${NC}"
         fi
 
         # 2. 复制 Agent 定义
         mkdir -p "$opencode_dir/agents"
-        # 查找 agent 定义文件 (.md)，通常是 agent_name.md 或 nbresearcher.md
-        # 这里假设定义文件可能不再叫 nbresearcher.md，而是通用名或在特定位置
-        # 根据之前的结构，文件在 agent_dir/nbresearcher.md
-        # 我们尝试查找 *.md 但排除 README 等
-        local agent_def=$(find "$agent_dir" -maxdepth 1 -name "*.md" | grep -v "README" | grep -v "USAGE" | grep -v "DEPLOY" | head -n 1)
+        local agent_def=""
+        if [ -f "$agent_dir/opencode/agent.md" ]; then
+            agent_def="$agent_dir/opencode/agent.md"
+        else
+            # 向后兼容: 查找根目录下的主要 md 文件
+            agent_def=$(find "$agent_dir" -maxdepth 1 -name "*.md" | grep -v "README" | grep -v "USAGE" | grep -v "DEPLOY" | grep -v "CLAUDE" | head -n 1)
+        fi
         
         if [ -n "$agent_def" ]; then
-            local def_name=$(basename "$agent_def")
-            cp "$agent_def" "$opencode_dir/agents/$def_name"
-            echo -e "${GREEN}✅ 已部署 Agent 定义: $def_name${NC}"
+            # 无论原名是什么，我们都用 agent_name.md 命名部署后的文件，或者保持原名？
+            # 保持一致性，使用 agent_name.md
+            cp "$agent_def" "$opencode_dir/agents/${agent_name}.md"
+            echo -e "${GREEN}✅ 已部署 Agent 定义: ${agent_name}.md${NC}"
         else
             echo -e "${YELLOW}⚠️  未找到 Agent 定义文件 (.md)${NC}"
         fi
 
-        # 3. 部署 Skills
-        if [ -d "$agent_dir/SKILLS" ]; then
+        # 3. 部署 Skills (从 shared/SKILLS 或 SKILLS)
+        local skills_src=""
+        if [ -d "$agent_dir/shared/SKILLS" ]; then
+            skills_src="$agent_dir/shared/SKILLS"
+        elif [ -d "$agent_dir/SKILLS" ]; then
+            skills_src="$agent_dir/SKILLS"
+        fi
+
+        if [ -n "$skills_src" ]; then
             mkdir -p "$opencode_dir/skills"
-            cp -r "$agent_dir/SKILLS/"* "$opencode_dir/skills/"
-            local count=$(ls "$agent_dir/SKILLS" | wc -l | tr -d ' ')
+            cp -r "$skills_src/"* "$opencode_dir/skills/"
+            local count=$(ls "$skills_src" | wc -l | tr -d ' ')
             echo -e "${GREEN}✅ 已部署 $count 个 Skills${NC}"
         fi
 
-        # 4. 部署 Workflows
-        if [ -d "$agent_dir/.agent/workflows" ]; then
+        # 4. 部署 Workflows (从 shared/workflows 或 .agent/workflows)
+        local workflows_src=""
+        if [ -d "$agent_dir/shared/workflows" ]; then
+            workflows_src="$agent_dir/shared/workflows"
+        elif [ -d "$agent_dir/.agent/workflows" ]; then
+            workflows_src="$agent_dir/.agent/workflows"
+        fi
+
+        if [ -n "$workflows_src" ]; then
             mkdir -p "$opencode_dir/workflows"
-            cp -r "$agent_dir/.agent/workflows/"* "$opencode_dir/workflows/"
-            local count=$(ls "$agent_dir/.agent/workflows" | wc -l | tr -d ' ')
+            cp -r "$workflows_src/"* "$opencode_dir/workflows/"
+            local count=$(ls "$workflows_src" | wc -l | tr -d ' ')
             echo -e "${GREEN}✅ 已部署 $count 个 Workflows${NC}"
         fi
         
-        # 5. 部署 Docs (可选，视具体 Agent 而定)
-        if [ -d "$agent_dir/docs" ]; then
-            # 使用 agent 名作为文档目录前缀，避免冲突
+        # 5. 部署 Docs (从 shared/docs 或 docs)
+        local docs_src=""
+        if [ -d "$agent_dir/shared/docs" ]; then
+            docs_src="$agent_dir/shared/docs"
+        elif [ -d "$agent_dir/docs" ]; then
+            docs_src="$agent_dir/docs"
+        fi
+
+        if [ -n "$docs_src" ]; then
             local target_docs="$opencode_dir/${agent_name/ /_}_docs"
             mkdir -p "$target_docs"
-            cp -r "$agent_dir/docs/"* "$target_docs/"
+            cp -r "$docs_src/"* "$target_docs/"
             echo -e "${GREEN}✅ 已部署文档到 $target_docs${NC}"
         fi
 
@@ -151,17 +178,67 @@ deploy_agent() {
         mkdir -p "$opencode_dir/projects"
         if [ ! -L "$opencode_dir/projects/$agent_name" ]; then
             ln -s "$agent_dir" "$opencode_dir/projects/$agent_name"
-            echo -e "${GREEN}✅ 已创建项目链接${NC}"
+            echo -e "${GREEN}✅ 已创建 OpenCode 项目链接${NC}"
         fi
 
     else
         echo -e "${YELLOW}⚠️  未检测到 OpenCode 配置目录，跳过 OpenCode 部署${NC}"
     fi
 
-    # Claude Code 部署 (通过 CLAUDE.md)
-    # 只要 CLAUDE.md 在 Agent 目录下，Claude Code 打开该目录即可识别
-    if [ -f "$agent_dir/CLAUDE.md" ]; then
-        echo -e "${GREEN}✅ 发现 CLAUDE.md，Claude Code 可直接使用此目录: $agent_dir${NC}"
+    # Claude Code 自动部署
+    local claude_config_dir=""
+    if [ -d "$HOME/.claude" ]; then
+        claude_config_dir="$HOME/.claude"
+    elif [ -d "$HOME/.config/claude" ]; then
+        claude_config_dir="$HOME/.config/claude"
+    elif [ -d "$HOME/Library/Application Support/Claude" ]; then
+        claude_config_dir="$HOME/Library/Application Support/Claude"
+    fi
+
+    # 检测 Claude 定义文件
+    local claude_def=""
+    if [ -f "$agent_dir/claude/agent.md" ]; then
+        claude_def="$agent_dir/claude/agent.md"
+    elif [ -f "$agent_dir/CLAUDE.md" ]; then
+        claude_def="$agent_dir/CLAUDE.md"
+    fi
+
+    if [ -n "$claude_def" ]; then
+        if [ -n "$claude_config_dir" ]; then
+            echo ""
+            echo -e "${BLUE}ℹ️  部署到 Claude Code: $claude_config_dir${NC}"
+            
+            # 创建 Claude agents 目录
+            mkdir -p "$claude_config_dir/agents"
+            
+            # 复制为 agent 定义文件
+            cp "$claude_def" "$claude_config_dir/agents/${agent_name}.md"
+            echo -e "${GREEN}✅ 已部署 Claude Agent 定义: ${agent_name}.md${NC}"
+            
+            # 如果有 opencode 配置，也复制到 Claude (作为备用)
+            local opencode_conf=""
+            if [ -f "$agent_dir/opencode/config.json" ]; then
+                opencode_conf="$agent_dir/opencode/config.json"
+            elif [ -f "$agent_dir/opencode.json" ]; then
+                opencode_conf="$agent_dir/opencode.json"
+            fi
+            
+            if [ -n "$opencode_conf" ]; then
+                cp "$opencode_conf" "$claude_config_dir/${agent_name}_config.json"
+                echo -e "${GREEN}✅ 已部署 Claude 配置: ${agent_name}_config.json${NC}"
+            fi
+            
+            # 创建项目符号链接
+            mkdir -p "$claude_config_dir/projects"
+            if [ ! -L "$claude_config_dir/projects/$agent_name" ]; then
+                ln -s "$agent_dir" "$claude_config_dir/projects/$agent_name"
+                echo -e "${GREEN}✅ 已创建 Claude 项目链接${NC}"
+            fi
+        else
+            echo ""
+            echo -e "${YELLOW}⚠️  发现 Claude 定义文件但未找到 Claude Code 配置目录${NC}"
+            echo -e "${BLUE}ℹ️  Claude Code 可直接打开此目录: $agent_dir${NC}"
+        fi
     fi
     
     echo ""

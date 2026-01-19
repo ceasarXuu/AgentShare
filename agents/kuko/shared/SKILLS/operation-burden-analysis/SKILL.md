@@ -413,5 +413,5 @@ description: 运营负担分析 - 评估日常运营需求、生活质量影响�
 
 ## 参考文档
 
-- `agents/NBResearcher/docs/好生意.md` - 方法论详细说明
-- `agents/NBResearcher/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估
+- `agents/kuko/docs/好生意.md` - 方法论详细说明
+- `agents/kuko/SKILLS/business-opportunity-assessment/SKILL.md` - 七维度评估

@@ -28,7 +28,7 @@ description: 好生意快速评估工作流(30分钟) - 快速判断产品方向
 
 ### Step 2: 三道防火墙检查 (10分钟)
 
-使用 `agents/NBResearcher/SKILLS/three-firewall-check/SKILL.md` 执行检查:
+使用 `agents/kuko/SKILLS/three-firewall-check/SKILL.md` 执行检查:
 
 #### 防火墙1: 致命风险检查
 
