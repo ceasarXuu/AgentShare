@@ -32,6 +32,11 @@ outputs:
     target: ~/.github/skills  # 用户指定路径
     type: directory
 
+# 项目级路径配置
+project_paths:
+  agents: .github/agents/
+  instructions: .github/copilot-instructions.md
+
 # 支持的功能
 features:
   - tools

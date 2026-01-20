@@ -40,6 +40,12 @@ outputs:
     type: directory
     optional: true
 
+# 项目级路径配置
+project_paths:
+  agents: .claude/agents/
+  settings: .claude/settings.json
+  main_prompt: CLAUDE.md
+
 # 支持的功能
 features:
   - tools

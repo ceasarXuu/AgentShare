@@ -1,0 +1,27 @@
+{
+    "name": "agentshare-tui",
+    "version": "1.0.0",
+    "description": "AgentShare TUI",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "build": "esbuild index.js --bundle --platform=node --format=esm --outfile=dist/index.js --loader:.js=jsx --external:ink --external:react --external:fs-extra --external:ink-select-input --external:ink-text-input",
+        "start": "node dist/index.js"
+    },
+    "dependencies": {
+        "fs-extra": "^11.2.0",
+        "ink": "^4.4.1",
+        "ink-select-input": "^5.0.0",
+        "ink-text-input": "^5.0.1",
+        "react": "^18.2.0"
+    },
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@babel/core": "^7.28.6",
+        "@babel/node": "^7.28.6",
+        "@babel/preset-react": "^7.28.5",
+        "@babel/register": "^7.28.6",
+        "esbuild": "^0.27.2"
+    }
+}

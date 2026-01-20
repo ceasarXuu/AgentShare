@@ -2,15 +2,16 @@
 
 ## AgentShare 部署工具
 
-NBAgents 智能部署工具 - 支持 Agent 扫描、部署和提取功能，使用 gum 提供现代化 TUI 体验。
+NBAgents 智能部署工具 - 支持 Agent 扫描、部署和提取功能，使用 Node.js + Ink 提供现代化 TUI 体验。
 
 ### 功能特性
 
 - 🔍 **自动扫描**: 检测 OpenCode 和 Claude Code 已安装的 Agents
 - 📦 **智能部署**: 将项目中的 Agents 部署到不同平台
 - 📥 **提取功能**: 从平台提取 Agents 到项目
-- 🎨 **现代化 UI**: 使用 gum 提供美观的交互界面
-- 🔧 **自动安装**: 自动检测并安装 gum 依赖
+- 🎨 **现代化 UI**: 使用 Ink 提供流畅的交互界面
+- ⚡️ **Clean Mode**: 自动清理屏幕，保持终端整洁
+- 🌐 **多语言支持**: 内置英文和简体中文支持 (Startup Selection)
 
 ### 快速开始
 
@@ -51,11 +52,12 @@ agentshare
 `install-macos-linux.sh` 会自动完成以下操作：
 
 1. ✅ 检测操作系统 (macOS/Linux)
-2. ✅ 验证 AgentShare.sh 存在
-3. ✅ 创建全局启动脚本
-4. ✅ 安装到 `/usr/local/bin` 或 `~/.local/bin`
-5. ✅ 配置 PATH 环境变量
-6. ✅ 测试安装是否成功
+2. ✅ 检查 Node.js 环境
+3. ✅ 验证 AgentShare.sh 存在
+4. ✅ 创建全局启动脚本
+5. ✅ 安装到 `/usr/local/bin` 或 `~/.local/bin`
+6. ✅ 配置 PATH 环境变量
+7. ✅ 测试安装是否成功
 
 ### 卸载
 

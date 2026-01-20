@@ -60,6 +60,12 @@ outputs:
     type: directory
     optional: true
 
+# 项目级路径配置
+project_paths:
+  agents: .opencode/agents/
+  config: .opencode/opencode.json
+  commands: .opencode/commands/
+
 # 支持的功能
 features:
   - skills

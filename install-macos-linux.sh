@@ -45,6 +45,25 @@ check_os() {
     echo ""
 }
 
+# 检查环境 (Node.js)
+check_environment() {
+    echo -e "${BLUE}🔍 检查运行环境...${NC}"
+    
+    if command -v node &> /dev/null; then
+        echo -e "${GREEN}✅ Node.js 已安装 ($(node -v))${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Node.js 未检测到${NC}"
+        echo -e "${YELLOW}   AgentShare 需要 Node.js环境运行。请尽快安装。${NC}"
+    fi
+
+    if command -v npm &> /dev/null; then
+        echo -e "${GREEN}✅ npm 已安装 ($(npm -v))${NC}"
+    else
+        echo -e "${YELLOW}⚠️  npm 未检测到${NC}"
+    fi
+    echo ""
+}
+
 # 检查 AgentShare.sh 是否存在
 check_agentshare_script() {
     echo -e "${BLUE}🔍 检查 AgentShare.sh...${NC}"
@@ -236,6 +255,7 @@ show_uninstall_info() {
 main() {
     print_header
     check_os
+    check_environment
     check_agentshare_script
     determine_install_path
     create_launcher

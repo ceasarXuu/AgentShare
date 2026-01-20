@@ -19,7 +19,11 @@
 
 ## 多 Agent 平台支持
 - VS Code IDE
-  - [ ] IDE 中的 github copilot 入口支持
+  - [x] IDE 中的 github copilot 入口支持
+  - [x] Kilo Code Plugin (VS Code) 支持
+
+- Antigravity IDE
+  - [ ] 
 
 
 - TRAE IDE（海外版，不是 TRAE CN）
