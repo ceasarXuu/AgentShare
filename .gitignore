@@ -49,3 +49,8 @@ opencode.local.json
 /cache/
 
 TODO.md
+
+/.opencode
+/.claude
+/.github
+/bak
