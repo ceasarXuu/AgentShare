@@ -1,87 +1,89 @@
-# NBAgents - Multi-Agent System
+# AgentShare - Multi-Agent System
 
-## AgentShare 部署工具
+[🇨🇳 中文文档](README-zh.md)
 
-NBAgents 智能部署工具 - 支持 Agent 扫描、部署和提取功能，使用 Node.js + Ink 提供现代化 TUI 体验。
+## AgentShare Deployment Tool
 
-### 功能特性
+AgentShare Intelligent Deployment Tool - Supports Agent scanning, deployment, and extraction, providing a modern TUI experience using Node.js + Ink.
 
-- 🔍 **自动扫描**: 检测 OpenCode 和 Claude Code 已安装的 Agents
-- 📦 **智能部署**: 将项目中的 Agents 部署到不同平台
-- 📥 **提取功能**: 从平台提取 Agents 到项目
-- 🎨 **现代化 UI**: 使用 Ink 提供流畅的交互界面
-- ⚡️ **Clean Mode**: 自动清理屏幕，保持终端整洁
-- 🌐 **多语言支持**: 内置英文和简体中文支持 (Startup Selection)
+### Features
 
-### 快速开始
+- 🔍 **Auto Scan**: Detect installed Agents in OpenCode, Claude Code, and Kilo Code
+- 📦 **Smart Deploy**: Deploy Agents from the project to different platforms
+- 📥 **Extraction**: Extract Agents from platforms to the project
+- 🎨 **Modern UI**: Smooth interactive interface using Ink
+- ⚡️ **Clean Mode**: Automatically clears screen to keep terminal tidy
+- 🌐 **Multi-language**: Built-in English and Simplified Chinese support (Startup Selection)
 
-#### 方式一：全局安装 (推荐)
+### Quick Start
 
-运行安装脚本，将 `agentshare` 命令添加到系统 PATH：
+#### Method 1: Global Installation (Recommended)
+
+Run the install script to add `agentshare` command to system PATH:
 
 ```bash
 ./install-macos-linux.sh
 ```
 
-安装完成后，您可以在任何位置使用：
+After installation, you can use it anywhere:
 
 ```bash
 agentshare
 ```
 
-#### 方式二：Windows 安装 (PowerShell)
+#### Method 2: Windows Installation (PowerShell)
 
-确保安装了 Git (Git Bash)。在 PowerShell 中运行：
+Ensure Git (Git Bash) is installed. Run in PowerShell:
 
 ```powershell
 .\install-windows.ps1
 ```
 
-这将创建 `agentshare` 命令并自动配置必要的环境。
+This will create `agentshare` command and configure necessary environment.
 
-#### 方式三：直接运行
+#### Method 3: Direct Run
 
-如果不想全局安装，可以直接运行：
+If you don't want global installation:
 
 ```bash
 ./AgentShare.sh
 ```
 
-### 安装脚本功能
+### Install Script Features
 
-`install-macos-linux.sh` 会自动完成以下操作：
+`install-macos-linux.sh` automatically performs:
 
-1. ✅ 检测操作系统 (macOS/Linux)
-2. ✅ 检查 Node.js 环境
-3. ✅ 验证 AgentShare.sh 存在
-4. ✅ 创建全局启动脚本
-5. ✅ 安装到 `/usr/local/bin` 或 `~/.local/bin`
-6. ✅ 配置 PATH 环境变量
-7. ✅ 测试安装是否成功
+1. ✅ Detect OS (macOS/Linux)
+2. ✅ Check Node.js environment
+3. ✅ Verify AgentShare.sh exists
+4. ✅ Create global launcher
+5. ✅ Install to `/usr/local/bin` or `~/.local/bin`
+6. ✅ Configure PATH environment variable
+7. ✅ Test installation
 
-### 卸载
+### Uninstall
 
-如果需要卸载，只需删除启动脚本：
+To uninstall, just delete the launcher:
 
 ```bash
-# 如果安装在 /usr/local/bin
+# If installed in /usr/local/bin
 sudo rm /usr/local/bin/agentshare
 
-# 如果安装在 ~/.local/bin
+# If installed in ~/.local/bin
 rm ~/.local/bin/agentshare
 ```
 
-### 主要功能
+### Main Functions
 
-1. **部署 Agent (项目 → 平台)**
-   - 将项目中的 Agents 部署到 OpenCode 或 Claude Code
-   - 支持同时部署到多个平台
-   - 自动复制配置、Skills、Workflows 等
+1. **Deploy Agent (Project → Platform)**
+   - Deploy project Agents to OpenCode, Claude Code, or Kilo Code (VS Code)
+   - Support simultaneous deployment to multiple platforms
+   - Auto copy configs, Skills, Workflows, etc.
 
-2. **提取 Agent (平台 → 项目)**
-   - 从 OpenCode 或 Claude Code 提取已安装的 Agents
-   - 保留完整的目录结构
-   - 自动生成 README
+2. **Extract Agent (Platform → Project)**
+   - Extract installed Agents from OpenCode, Claude Code, or Kilo Code
+   - Preserve directory structure
+   - Auto generate README
 
 ---
 
@@ -104,6 +106,7 @@ Designed for independent developers and small teams to quickly identify the most
     - `opencode/`: OpenCode configuration
     - `claude/`: Claude Code configuration
     - `shared/`: Shared resources (Skills, Workflows, Docs)
+    - *Note: Kilo Code uses the main `agent.md` directly.*
 
 ---
 
@@ -271,7 +274,7 @@ echo $BRAVE_API_KEY   # Should display your API key
 
 ### Q1: Why don't AI model keys need to be configured?
 
-**A**: OpenCode and Claude Code already manage AI model API keys at the platform level. Once configured in the platform, all Agents can use them directly without needing to reconfigure for each project.
+**A**: OpenCode and Claude Code already manage AI model API keys at the platform level. Once configured in the platform, all Agents can use them directly without needing to reconfigure for each project. Kilo Code (VS Code Plugin) typically uses your IDE's existing configuration.
 
 ### Q2: What if I want to use a different search engine?
 

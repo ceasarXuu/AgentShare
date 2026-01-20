@@ -1,4 +1,91 @@
-# NBAgents - 多智能体系统
+# AgentShare - 多智能体系统
+
+[🇺English Docs](README.md)
+
+## AgentShare 部署工具
+
+AgentShare 智能部署工具 - 支持 Agent 扫描、部署和提取功能，使用 Node.js + Ink 提供现代化 TUI 体验。
+
+### 功能特性
+
+- 🔍 **自动扫描**: 检测 OpenCode、Claude Code 和 Kilo Code 已安装的 Agents
+- 📦 **智能部署**: 将项目中的 Agents 部署到不同平台
+- 📥 **提取功能**: 从平台提取 Agents 到项目
+- 🎨 **现代化 UI**: 使用 Ink 提供流畅的交互界面
+- ⚡️ **Clean Mode**: 自动清理屏幕，保持终端整洁
+- 🌐 **多语言支持**: 内置英文和简体中文支持 (Startup Selection)
+
+### 快速开始
+
+#### 方式一：全局安装 (推荐)
+
+运行安装脚本，将 `agentshare` 命令添加到系统 PATH：
+
+```bash
+./install-macos-linux.sh
+```
+
+安装完成后，您可以在任何位置使用：
+
+```bash
+agentshare
+```
+
+#### 方式二：Windows 安装 (PowerShell)
+
+确保安装了 Git (Git Bash)。在 PowerShell 中运行：
+
+```powershell
+.\install-windows.ps1
+```
+
+这将创建 `agentshare` 命令并自动配置必要的环境。
+
+#### 方式三：直接运行
+
+如果不想全局安装，可以直接运行：
+
+```bash
+./AgentShare.sh
+```
+
+### 安装脚本功能
+
+`install-macos-linux.sh` 会自动完成以下操作：
+
+1. ✅ 检测操作系统 (macOS/Linux)
+2. ✅ 检查 Node.js 环境
+3. ✅ 验证 AgentShare.sh 存在
+4. ✅ 创建全局启动脚本
+5. ✅ 安装到 `/usr/local/bin` 或 `~/.local/bin`
+6. ✅ 配置 PATH 环境变量
+7. ✅ 测试安装是否成功
+
+### 卸载
+
+如果需要卸载，只需删除启动脚本：
+
+```bash
+# 如果安装在 /usr/local/bin
+sudo rm /usr/local/bin/agentshare
+
+# 如果安装在 ~/.local/bin
+rm ~/.local/bin/agentshare
+```
+
+### 主要功能
+
+1. **部署 Agent (项目 → 平台)**
+   - 将项目中的 Agents 部署到 OpenCode、Claude Code 或 Kilo Code (VS Code)
+   - 支持同时部署到多个平台
+   - 自动复制配置、Skills、Workflows 等
+
+2. **提取 Agent (平台 → 项目)**
+   - 从 OpenCode、Claude Code 或 Kilo Code 提取已安装的 Agents
+   - 保留完整的目录结构
+   - 自动生成 README
+
+---
 
 该项目托管了多个专用的 AI Agent。目前的 Agent 列表如下：
 
