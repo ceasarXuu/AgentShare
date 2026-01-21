@@ -1,6 +1,6 @@
 # AgentShare - 多智能体系统
 
-[🇺English Docs](README.md)
+[English Docs](README.md)
 
 ## AgentShare 部署工具
 

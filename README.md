@@ -1,6 +1,6 @@
 # AgentShare - Multi-Agent System
 
-[🇨🇳 中文文档](README-zh.md)
+[中文文档](README-zh.md)
 
 ## AgentShare Deployment Tool
 
