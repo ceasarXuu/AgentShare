@@ -1,22 +1,13 @@
-# GitHub Copilot (VS Code) Platform Schema
-# 定义如何从统一 Agent 定义生成 GitHub Copilot 专用格式
-
 name: github_copilot
 display_name: GitHub Copilot (VS Code)
-
-# 目标目录检测
-target_detection:
-  paths:
-    - ~/Library/Application Support/Code/User/prompts  # macOS
-    - ~/.config/Code/User/prompts                       # Linux
-    # Windows: %APPDATA%/Code/User/prompts
-
-# 部署后是否需要重启
 requires_restart: false
 
-# 输出配置
+target_detection:
+  paths:
+    - ~/Library/Application Support/Code/User/prompts
+    - ~/.config/Code/User/prompts
+
 outputs:
-  # 1. Agent 定义文件
   agent_definition:
     target: "{agent_name}.agent.md"
     format: markdown_with_frontmatter
@@ -25,19 +16,60 @@ outputs:
       - description
       - tools: platforms.github_copilot.tools
     include_body: true
-    
-  # 2. Skills 目录
+
+  skill_config:
+    target: ../mcp.json
+    format: json
+    key: mcpServers
+
   skills:
     source: skills/
-    target: ~/.github/skills  # 用户指定路径
+    target: ~/.copilot/skills
     type: directory
 
-# 项目级路径配置
 project_paths:
   agents: .github/agents/
-  instructions: .github/copilot-instructions.md
+  skills: .github/skills
+  config: .vscode/mcp.json
 
-# 支持的功能
 features:
+  - agents
   - tools
   - skills
+  - mcps
+
+capabilities:
+  - id: agents.primary
+    status: supported
+    platform_term: custom agent (custom mode)
+    neutral_semantics: 可由用户直接选择的主对话角色
+    evidence:
+      - https://code.visualstudio.com/docs/copilot/customization/custom-agents
+  - id: agents.subagent
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 可被主 agent 调用的子角色
+    evidence: []
+  - id: skills.agent_skills
+    status: supported
+    platform_term: Agent Skills
+    neutral_semantics: 以 SKILL.md 目录为单位的可加载能力
+    evidence:
+      - https://code.visualstudio.com/docs/copilot/customization/agent-skills
+  - id: tools.permission
+    status: supported
+    platform_term: tools
+    neutral_semantics: 按 agent 维度限制工具访问
+    evidence:
+      - https://code.visualstudio.com/docs/copilot/customization/custom-agents
+  - id: mcps
+    status: supported
+    platform_term: mcp.json
+    neutral_semantics: 通过配置文件加载 MCP 工具
+    evidence:
+      - https://code.visualstudio.com/docs/copilot/customization/mcp-servers
+  - id: instructions.project
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 项目级固定规则/指令文件
+    evidence: []

@@ -1,0 +1,67 @@
+name: kilo_code_vscode
+display_name: Kilo Code Plugin (VS Code)
+requires_restart: true
+
+target_detection:
+  paths:
+    - ~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/settings
+
+outputs:
+  custom_modes:
+    target: custom_modes.yaml
+    format: yaml
+    structure:
+      - name
+      - description
+      - roleDefinition
+      - groups: []
+
+  skill_config:
+    target: mcp.json
+    format: json
+    key: mcpServers
+
+  skills:
+    source: skills/
+    target: skills/
+    type: directory
+
+project_paths:
+  config: .vscode/mcp.json
+  custom_modes: .kilocodemodes
+  skills: .kilocode/skills
+
+features:
+  - skills
+  - mcps
+  - tools
+
+capabilities:
+  - id: agents.primary
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 可由用户直接选择的主对话角色
+    evidence: []
+  - id: agents.subagent
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 可被主 agent 调用的子角色
+    evidence: []
+  - id: skills.agent_skills
+    status: supported
+    platform_term: skills
+    neutral_semantics: 以 SKILL.md 目录为单位的可加载能力
+    evidence:
+      - https://kilo.ai/docs/cli
+  - id: tools.permission
+    status: supported
+    platform_term: tool groups
+    neutral_semantics: 按模式划分工具访问范围
+    evidence:
+      - https://kilo.ai/docs/features/custom-modes
+  - id: mcps
+    status: supported
+    platform_term: mcp.json / mcp_settings.json
+    neutral_semantics: 通过配置文件加载 MCP 工具
+    evidence:
+      - https://kilo.ai/docs/features/mcp/using-mcp-in-kilo-code

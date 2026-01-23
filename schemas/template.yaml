@@ -1,0 +1,148 @@
+# Platform Schema Template (v2, full)
+# 与当前仓库 schema 结构一致，覆盖已出现的全部字段类型
+
+# 基础信息
+name: platform_name
+display_name: Platform Display Name
+requires_restart: false
+
+# 平台安装目录探测
+target_detection:
+  # 按顺序探测，找到第一个存在的路径即认为已安装
+  paths:
+    - ~/.config/platform
+    - ~/.platform
+    - ~/Library/Application Support/Platform
+
+# 输出定义（由中立标准生成平台目标）
+outputs:
+  # 1) Agent 定义文件（Markdown + frontmatter）
+  agent_definition:
+    # 支持 {agent_name} 模板变量
+    # 相对路径：global scope 会拼接探测到的平台根目录
+    # 绝对路径：直接使用该路径
+    target: agents/{agent_name}.md
+    # 支持格式：markdown_with_frontmatter / json / directory / yaml
+    format: markdown_with_frontmatter
+    # frontmatter 字段映射
+    # 字符串：直接取中立字段
+    # 映射：左侧为输出字段，右侧为中立字段路径
+    frontmatter:
+      - name
+      - description
+      - tools: platforms.platform_name.tools
+      - model: platforms.platform_name.model
+    # 是否输出正文内容（Markdown body）
+    include_body: true
+    # 排除字段（可选）
+    exclude_fields:
+      - model
+
+  # 2) Skills 的 MCP 配置文件（JSON）
+  skill_config:
+    target: config.json
+    format: json
+    key: mcpServers
+    # 模板（可选），当平台需要固定 JSON 结构时使用
+    template: |
+      {
+        "mcpServers": {mcps}
+      }
+
+  # 3) 平台主配置文件（JSON，可选）
+  config:
+    target: config.json
+    format: json
+    template: |
+      {
+        "mcpServers": {mcps}
+      }
+    exclude_fields:
+      - model
+    optional: true
+
+  # 4) Custom Modes/Agents（YAML，可选，Kilo 类平台使用）
+  custom_modes:
+    target: custom_modes.yaml
+    format: yaml
+    # 当平台要求固定字段结构时使用
+    structure:
+      - name
+      - description
+      - roleDefinition
+      - groups: []
+    optional: true
+
+  # 5) Skills 目录
+  skills:
+    source: skills/
+    target: skills/
+    type: directory
+
+  # 6) Workflows 目录（可选）
+  workflows:
+    source: workflows/
+    target: workflows/
+    type: directory
+    optional: true
+
+  # 7) 文档目录（可选）
+  docs:
+    source: docs/
+    target: "{agent_name}_docs/"
+    type: directory
+    optional: true
+
+# 项目级路径配置（可选）
+project_paths:
+  agents: .platform/agents/
+  skills: .platform/skills/
+  config: .platform/config.json
+  commands: .platform/commands/
+  custom_modes: .platform/custom_modes/
+
+# 支持的功能集合
+features:
+  - agents
+  - skills
+  - mcps
+  - tools
+  - docs
+  - workflows
+
+# 能力声明与证据
+capabilities:
+  - id: agents.primary
+    status: supported
+    platform_term: primary agent
+    neutral_semantics: 可由用户直接选择的主对话角色
+    evidence:
+      - https://platform.example/docs/agents
+  - id: agents.subagent
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 可被主 agent 调用的子角色
+    evidence: []
+  - id: skills.agent_skills
+    status: supported
+    platform_term: skills
+    neutral_semantics: 以 SKILL.md 目录为单位的可加载能力
+    evidence:
+      - https://platform.example/docs/skills
+  - id: tools.permission
+    status: supported
+    platform_term: tools permissions
+    neutral_semantics: 按 agent 维度限制工具访问
+    evidence:
+      - https://platform.example/docs/tools
+  - id: mcps
+    status: supported
+    platform_term: mcpServers
+    neutral_semantics: 通过配置文件加载 MCP 工具
+    evidence:
+      - https://platform.example/docs/mcp
+  - id: instructions.project
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 项目级固定规则/指令文件
+    evidence: []

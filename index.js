@@ -6,512 +6,13 @@ import path2 from "path";
 import fs from "fs-extra";
 import path from "path";
 import os from "os";
-var REPO_ROOT = process.cwd();
-var AGENTS_ROOT = path.join(REPO_ROOT, "agents");
-var PLATFORM_PATHS = {
-  opencode: [
-    path.join(os.homedir(), ".config/opencode"),
-    path.join(os.homedir(), ".opencode"),
-    path.join(os.homedir(), "Library/Application Support/OpenCode")
-  ],
-  claude: [
-    path.join(os.homedir(), ".claude"),
-    path.join(os.homedir(), ".config/claude"),
-    path.join(os.homedir(), "Library/Application Support/Claude")
-  ],
-  kilocode: [
-    path.join(os.homedir(), "Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/settings")
-  ],
-  copilot: [
-    os.platform() === "darwin" ? path.join(os.homedir(), "Library/Application Support/Code/User/prompts") : path.join(os.homedir(), ".config/Code/User/prompts")
-  ]
-};
-var PROJECT_LEVEL_PATHS = {
-  opencode: {
-    agents: ".opencode/agents",
-    config: ".opencode/opencode.json"
-  },
-  claude: {
-    agents: ".claude/agents",
-    settings: ".claude/settings.json"
-  },
-  copilot: {
-    agents: ".github/agents",
-    instructions: ".github/copilot-instructions.md"
-  }
-};
-async function detectProjectRoot(startDir = process.cwd()) {
-  const markers = [".git", "package.json", "Cargo.toml", "go.mod", "pom.xml", "build.gradle", ".opencode", ".claude", ".github"];
-  let currentDir = startDir;
-  while (currentDir !== path.dirname(currentDir)) {
-    for (const marker of markers) {
-      if (await fs.pathExists(path.join(currentDir, marker))) {
-        return currentDir;
-      }
-    }
-    currentDir = path.dirname(currentDir);
-  }
-  return null;
-}
-async function scanProjectAgents(projectRoot) {
-  if (!projectRoot) return { opencode: [], claude: [], copilot: [] };
-  const agents = {
-    opencode: [],
-    claude: [],
-    copilot: []
-  };
-  const opencodeAgentsDir = path.join(projectRoot, PROJECT_LEVEL_PATHS.opencode.agents);
-  if (await fs.pathExists(opencodeAgentsDir)) {
-    agents.opencode = await scanAgents(opencodeAgentsDir);
-  }
-  const claudeAgentsDir = path.join(projectRoot, PROJECT_LEVEL_PATHS.claude.agents);
-  if (await fs.pathExists(claudeAgentsDir)) {
-    agents.claude = await scanAgents(claudeAgentsDir);
-  }
-  const copilotAgentsDir = path.join(projectRoot, PROJECT_LEVEL_PATHS.copilot.agents);
-  if (await fs.pathExists(copilotAgentsDir)) {
-    const files = await fs.readdir(copilotAgentsDir);
-    agents.copilot = files.filter((f) => f.endsWith(".agent.md")).map((f) => f.replace(".agent.md", ""));
-  }
-  return agents;
-}
-async function scanAgents(dir) {
-  if (!await fs.pathExists(dir)) return [];
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  return entries.filter((dirent) => dirent.isDirectory() || dirent.name.endsWith(".md")).map((dirent) => dirent.name.replace(/\.md$/, "").replace(/\.agent$/, ""));
-}
-async function detectPlatforms() {
-  const result = {};
-  for (const [key, paths] of Object.entries(PLATFORM_PATHS)) {
-    for (const p of paths) {
-      if (await fs.pathExists(p)) {
-        result[key] = p;
-        break;
-      }
-    }
-  }
-  return result;
-}
-async function scanInstalledAgents(platforms) {
-  const agents = {
-    opencode: [],
-    claude: [],
-    kilocode: [],
-    copilot: []
-  };
-  if (platforms.opencode) {
-    const official = await scanAgents(path.join(platforms.opencode, "agent"));
-    const user = await scanAgents(path.join(platforms.opencode, "agents"));
-    agents.opencode = [.../* @__PURE__ */ new Set([...official, ...user])];
-  }
-  if (platforms.claude) {
-    agents.claude = await scanAgents(path.join(platforms.claude, "agents"));
-  }
-  if (platforms.kilocode) {
-    try {
-      const yamlFile = path.join(platforms.kilocode, "custom_modes.yaml");
-      if (await fs.pathExists(yamlFile)) {
-        const content = await fs.readFile(yamlFile, "utf8");
-        const slugs = [];
-        const regex = /slug:\s*([a-zA-Z0-9-]+)/g;
-        let match;
-        while ((match = regex.exec(content)) !== null) {
-          slugs.push(match[1]);
-        }
-        agents.kilocode = slugs;
-      } else {
-        agents.kilocode = [];
-      }
-    } catch (e) {
-      agents.kilocode = [];
-    }
-  }
-  if (platforms.copilot) {
-    const files = await fs.readdir(platforms.copilot);
-    agents.copilot = files.filter((f) => f.endsWith(".agent.md")).map((f) => f.replace(".agent.md", ""));
-  }
-  return agents;
-}
-async function checkAgentExists(agentName, targetPlatform, platforms) {
-  const targetDir = platforms[targetPlatform];
-  if (!targetDir) return false;
-  if (targetPlatform === "opencode") {
-    const agentFile = path.join(targetDir, "agents", `${agentName}.md`);
-    return await fs.pathExists(agentFile);
-  } else if (targetPlatform === "claude") {
-    const agentFile = path.join(targetDir, "agents", `${agentName}.md`);
-    return await fs.pathExists(agentFile);
-  } else if (targetPlatform === "kilocode") {
-    const yamlFile = path.join(targetDir, "custom_modes.yaml");
-    if (!await fs.pathExists(yamlFile)) return false;
-    const content = await fs.readFile(yamlFile, "utf8");
-    return content.includes(`slug: ${agentName}`);
-  } else if (targetPlatform === "copilot") {
-    const agentFile = path.join(targetDir, `${agentName}.agent.md`);
-    return await fs.pathExists(agentFile);
-  }
-  return false;
-}
-async function checkAgentExistsInProject(agentName, targetPlatform, projectRoot) {
-  if (!projectRoot) return false;
-  const projectPaths = PROJECT_LEVEL_PATHS[targetPlatform];
-  if (!projectPaths) return false;
-  const targetAgentsDir = path.join(projectRoot, projectPaths.agents);
-  if (targetPlatform === "opencode" || targetPlatform === "claude") {
-    const agentFile = path.join(targetAgentsDir, `${agentName}.md`);
-    return await fs.pathExists(agentFile);
-  } else if (targetPlatform === "copilot") {
-    const agentFile = path.join(targetAgentsDir, `${agentName}.agent.md`);
-    return await fs.pathExists(agentFile);
-  }
-  return false;
-}
-async function deployAgent(agentName, targetPlatform, platforms) {
-  const agentSource = path.join(AGENTS_ROOT, agentName);
-  const targetDir = platforms[targetPlatform];
-  if (!targetDir) {
-    throw new Error(`${targetPlatform} not installed`);
-  }
-  const srcFile = path.join(agentSource, "agent.md");
-  if (!await fs.pathExists(srcFile)) {
-    throw new Error(`Agent definition not found: ${srcFile}`);
-  }
-  if (targetPlatform === "opencode") {
-    const configSrc = path.join(agentSource, "config.json");
-    if (await fs.pathExists(configSrc)) {
-      const config = await fs.readJson(configSrc);
-      delete config.model;
-      await fs.writeJson(path.join(targetDir, "opencode.json"), config);
-    } else {
-      const defaultConfig = {
-        temperature: 0.7,
-        max_tokens: 4096
-      };
-      await fs.writeJson(path.join(targetDir, "opencode.json"), defaultConfig);
-    }
-    await fs.ensureDir(path.join(targetDir, "agents"));
-    let content = await fs.readFile(srcFile, "utf8");
-    if (!content.includes("mode:")) {
-      content = content.replace(/^---/, "---\nmode: primary");
-    }
-    content = content.replace(/^model:.*\n/m, "");
-    await fs.writeFile(path.join(targetDir, "agents", `${agentName}.md`), content);
-    const skillsSrc = path.join(agentSource, "skills");
-    if (await fs.pathExists(skillsSrc)) {
-      await fs.copy(skillsSrc, path.join(targetDir, "skills"));
-    }
-    const workflowsSrc = path.join(agentSource, "workflows");
-    if (await fs.pathExists(workflowsSrc)) {
-      await fs.copy(workflowsSrc, path.join(targetDir, "workflows"));
-    }
-  } else if (targetPlatform === "claude") {
-    await fs.ensureDir(path.join(targetDir, "agents"));
-    await fs.copy(srcFile, path.join(targetDir, "agents", `${agentName}.md`));
-  } else if (targetPlatform === "kilocode") {
-    const yamlFile = path.join(targetDir, "custom_modes.yaml");
-    let yamlContent = "";
-    if (await fs.pathExists(yamlFile)) {
-      yamlContent = await fs.readFile(yamlFile, "utf8");
-    } else {
-      yamlContent = "customModes:\n";
-    }
-    const srcContent = await fs.readFile(srcFile, "utf8");
-    const nameMatch = srcContent.match(/name:\s*(.*)/);
-    const descMatch = srcContent.match(/description:\s*(.*)/);
-    const name = nameMatch ? nameMatch[1].trim() : agentName;
-    const description = descMatch ? descMatch[1].trim() : `Agent ${agentName}`;
-    const systemPrompt = srcContent.replace(/---[\s\S]*?---/, "").trim();
-    const newEntry = `  - slug: ${agentName}
-    name: ${name}
-    roleDefinition: ${systemPrompt.replace(/\n/g, "\\n")}
-    description: ${description}
-    groups:
-      - read
-      - edit
-      - browser
-      - command
-      - mcp
-    source: global
-`;
-    if (yamlContent.includes(`slug: ${agentName}`)) {
-      const blockRegex = new RegExp(`^  - slug: ${agentName}[\\s\\S]*?(?=^  - slug:|$)`, "m");
-      if (blockRegex.test(yamlContent)) {
-        yamlContent = yamlContent.replace(blockRegex, newEntry);
-      } else {
-        yamlContent += "\n" + newEntry;
-      }
-    } else {
-      yamlContent += "\n" + newEntry;
-    }
-    await fs.ensureDir(path.dirname(yamlFile));
-    await fs.writeFile(yamlFile, yamlContent);
-  } else if (targetPlatform === "copilot") {
-    await fs.copy(srcFile, path.join(targetDir, `${agentName}.agent.md`));
-  }
-}
-async function extractAgent(agentName, sourcePlatform, platforms) {
-  const targetDir = path.join(AGENTS_ROOT, agentName);
-  const sourceBase = platforms[sourcePlatform];
-  if (!sourceBase) {
-    throw new Error(`${sourcePlatform} not installed`);
-  }
-  await fs.ensureDir(targetDir);
-  if (sourcePlatform === "opencode") {
-    const configSrc = path.join(sourceBase, "opencode.json");
-    if (await fs.pathExists(configSrc)) {
-      await fs.copy(configSrc, path.join(targetDir, "config.json"));
-    }
-    const agentSrc = path.join(sourceBase, "agents", `${agentName}.md`);
-    if (await fs.pathExists(agentSrc)) {
-      await fs.copy(agentSrc, path.join(targetDir, "agent.md"));
-    }
-    const skillsSrc = path.join(sourceBase, "skills");
-    if (await fs.pathExists(skillsSrc)) {
-      await fs.ensureDir(path.join(targetDir, "skills"));
-      await fs.copy(skillsSrc, path.join(targetDir, "skills"));
-    }
-    const workflowsSrc = path.join(sourceBase, "workflows");
-    if (await fs.pathExists(workflowsSrc)) {
-      await fs.ensureDir(path.join(targetDir, "workflows"));
-      await fs.copy(workflowsSrc, path.join(targetDir, "workflows"));
-    }
-  } else if (sourcePlatform === "kilocode") {
-    const yamlFile = path.join(sourceBase, "custom_modes.yaml");
-    if (await fs.pathExists(yamlFile)) {
-      const content = await fs.readFile(yamlFile, "utf8");
-      const blockRegex = new RegExp(`^  - slug: ${agentName}([\\s\\S]*?)(?=^  - slug:|$)`, "m");
-      const match = content.match(blockRegex);
-      if (match) {
-        const block = match[0];
-        const nameMatch = block.match(/name:\s*(.*)/);
-        const descMatch = block.match(/description:\s*(.*)/);
-        const roleMatch = block.match(/roleDefinition:\s*(.*)/);
-        const name = nameMatch ? nameMatch[1].trim() : agentName;
-        const description = descMatch ? descMatch[1].trim() : "";
-        let roleDefinition = roleMatch ? roleMatch[1].trim() : "";
-        roleDefinition = roleDefinition.replace(/\\n/g, "\n");
-        const markdown = `---
-name: ${name}
-description: ${description}
----
-
-${roleDefinition}
-`;
-        await fs.writeFile(path.join(targetDir, "agent.md"), markdown);
-      }
-    }
-  } else if (sourcePlatform === "claude") {
-    const agentSrc = path.join(sourceBase, "agents", `${agentName}.md`);
-    if (await fs.pathExists(agentSrc)) {
-      await fs.copy(agentSrc, path.join(targetDir, "agent.md"));
-    }
-  } else if (sourcePlatform === "copilot") {
-    const agentSrc = path.join(sourceBase, `${agentName}.agent.md`);
-    if (await fs.pathExists(agentSrc)) {
-      await fs.copy(agentSrc, path.join(targetDir, "agent.md"));
-    }
-  }
-}
-async function uninstallAgent(agentName, targetPlatform, platforms) {
-  const targetBase = platforms[targetPlatform];
-  if (!targetBase) throw new Error(`${targetPlatform} not installed`);
-  if (targetPlatform === "opencode") {
-    const agentFile = path.join(targetBase, "agents", `${agentName}.md`);
-    if (await fs.pathExists(agentFile)) {
-      await fs.remove(agentFile);
-    }
-    const agentSource = path.join(AGENTS_ROOT, agentName);
-    if (await fs.pathExists(agentSource)) {
-      const skillsSrc = path.join(agentSource, "skills");
-      if (await fs.pathExists(skillsSrc)) {
-        const skills = await fs.readdir(skillsSrc);
-        const targetSkillsDir = path.join(targetBase, "skills");
-        if (await fs.pathExists(targetSkillsDir)) {
-          for (const skill of skills) {
-            try {
-              await fs.remove(path.join(targetSkillsDir, skill));
-            } catch (e) {
-            }
-          }
-        }
-      }
-      const workflowsSrc = path.join(agentSource, "workflows");
-      if (await fs.pathExists(workflowsSrc)) {
-        const workflows = await fs.readdir(workflowsSrc);
-        const targetWorkflowsDir = path.join(targetBase, "workflows");
-        if (await fs.pathExists(targetWorkflowsDir)) {
-          for (const workflow of workflows) {
-            try {
-              await fs.remove(path.join(targetWorkflowsDir, workflow));
-            } catch (e) {
-            }
-          }
-        }
-      }
-    }
-  } else if (targetPlatform === "claude") {
-    const agentFile = path.join(targetBase, "agents", `${agentName}.md`);
-    if (await fs.pathExists(agentFile)) {
-      await fs.remove(agentFile);
-    }
-  } else if (targetPlatform === "kilocode") {
-    const yamlFile = path.join(targetBase, "custom_modes.yaml");
-    if (await fs.pathExists(yamlFile)) {
-      let content = await fs.readFile(yamlFile, "utf8");
-      const blockRegex = new RegExp(`^  - slug: ${agentName}[\\s\\S]*?(?=^  - slug:|$)`, "m");
-      if (blockRegex.test(content)) {
-        content = content.replace(blockRegex, "");
-        content = content.replace(/\n\n\n/g, "\n\n");
-        await fs.writeFile(yamlFile, content);
-      }
-    }
-  } else if (targetPlatform === "copilot") {
-    const agentFile = path.join(targetBase, `${agentName}.agent.md`);
-    if (await fs.pathExists(agentFile)) {
-      await fs.remove(agentFile);
-    }
-  }
-}
-async function deployAgentToProject(agentName, targetPlatform, projectRoot) {
-  if (!projectRoot) {
-    throw new Error("Project root not detected");
-  }
-  const agentSource = path.join(AGENTS_ROOT, agentName);
-  const projectPaths = PROJECT_LEVEL_PATHS[targetPlatform];
-  if (!projectPaths) {
-    throw new Error(`Unknown platform: ${targetPlatform}`);
-  }
-  const targetAgentsDir = path.join(projectRoot, projectPaths.agents);
-  await fs.ensureDir(targetAgentsDir);
-  const srcFile = path.join(agentSource, "agent.md");
-  if (!await fs.pathExists(srcFile)) {
-    throw new Error(`Agent definition not found: ${srcFile}`);
-  }
-  if (targetPlatform === "opencode") {
-    let content = await fs.readFile(srcFile, "utf8");
-    if (!content.includes("mode:")) {
-      content = content.replace(/^---/, "---\nmode: primary");
-    }
-    content = content.replace(/^model:.*\n/m, "");
-    await fs.writeFile(path.join(targetAgentsDir, `${agentName}.md`), content);
-    const skillsSrc = path.join(agentSource, "skills");
-    if (await fs.pathExists(skillsSrc)) {
-      const skillsTarget = path.join(path.dirname(targetAgentsDir), "skills");
-      await fs.ensureDir(skillsTarget);
-      await fs.copy(skillsSrc, skillsTarget);
-    }
-    const workflowsSrc = path.join(agentSource, "workflows");
-    if (await fs.pathExists(workflowsSrc)) {
-      const workflowsTarget = path.join(path.dirname(targetAgentsDir), "workflows");
-      await fs.ensureDir(workflowsTarget);
-      await fs.copy(workflowsSrc, workflowsTarget);
-    }
-  } else if (targetPlatform === "claude") {
-    await fs.copy(srcFile, path.join(targetAgentsDir, `${agentName}.md`));
-  } else if (targetPlatform === "copilot") {
-    await fs.copy(srcFile, path.join(targetAgentsDir, `${agentName}.agent.md`));
-  }
-}
-async function extractAgentFromProject(agentName, sourcePlatform, projectRoot) {
-  if (!projectRoot) {
-    throw new Error("Project root not detected");
-  }
-  const targetDir = path.join(AGENTS_ROOT, agentName);
-  const projectPaths = PROJECT_LEVEL_PATHS[sourcePlatform];
-  if (!projectPaths) {
-    throw new Error(`Unknown platform: ${sourcePlatform}`);
-  }
-  await fs.ensureDir(targetDir);
-  const sourceAgentsDir = path.join(projectRoot, projectPaths.agents);
-  if (sourcePlatform === "opencode") {
-    const configSrc = path.join(sourceAgentsDir, "..", "opencode.json");
-    const projectOpencodeDir = path.dirname(sourceAgentsDir);
-    const configSrcFile = path.join(projectOpencodeDir, "opencode.json");
-    if (await fs.pathExists(configSrcFile)) {
-      await fs.copy(configSrcFile, path.join(targetDir, "config.json"));
-    }
-    const agentSrc = path.join(sourceAgentsDir, `${agentName}.md`);
-    if (await fs.pathExists(agentSrc)) {
-      await fs.copy(agentSrc, path.join(targetDir, "agent.md"));
-    }
-    const skillsSrc = path.join(projectOpencodeDir, "skills");
-    if (await fs.pathExists(skillsSrc)) {
-      await fs.ensureDir(path.join(targetDir, "skills"));
-      await fs.copy(skillsSrc, path.join(targetDir, "skills"));
-    }
-    const workflowsSrc = path.join(projectOpencodeDir, "workflows");
-    if (await fs.pathExists(workflowsSrc)) {
-      await fs.ensureDir(path.join(targetDir, "workflows"));
-      await fs.copy(workflowsSrc, path.join(targetDir, "workflows"));
-    }
-  } else if (sourcePlatform === "claude") {
-    const agentSrc = path.join(sourceAgentsDir, `${agentName}.md`);
-    if (await fs.pathExists(agentSrc)) {
-      await fs.copy(agentSrc, path.join(targetDir, "agent.md"));
-    }
-  } else if (sourcePlatform === "copilot") {
-    const agentSrc = path.join(sourceAgentsDir, `${agentName}.agent.md`);
-    if (await fs.pathExists(agentSrc)) {
-      await fs.copy(agentSrc, path.join(targetDir, "agent.md"));
-    }
-  }
-}
-async function uninstallAgentFromProject(agentName, targetPlatform, projectRoot) {
-  if (!projectRoot) {
-    throw new Error("Project root not detected");
-  }
-  const projectPaths = PROJECT_LEVEL_PATHS[targetPlatform];
-  if (!projectPaths) {
-    throw new Error(`Unknown platform: ${targetPlatform}`);
-  }
-  const agentsDir = path.join(projectRoot, projectPaths.agents);
-  if (targetPlatform === "opencode") {
-    const agentFile = path.join(agentsDir, `${agentName}.md`);
-    if (await fs.pathExists(agentFile)) {
-      await fs.remove(agentFile);
-    }
-    const agentSource = path.join(AGENTS_ROOT, agentName);
-    if (await fs.pathExists(agentSource)) {
-      const projectOpencodeDir = path.dirname(agentsDir);
-      const skillsSrc = path.join(agentSource, "skills");
-      if (await fs.pathExists(skillsSrc)) {
-        const skills = await fs.readdir(skillsSrc);
-        const targetSkillsDir = path.join(projectOpencodeDir, "skills");
-        if (await fs.pathExists(targetSkillsDir)) {
-          for (const skill of skills) {
-            try {
-              await fs.remove(path.join(targetSkillsDir, skill));
-            } catch (e) {
-            }
-          }
-        }
-      }
-      const workflowsSrc = path.join(agentSource, "workflows");
-      if (await fs.pathExists(workflowsSrc)) {
-        const workflows = await fs.readdir(workflowsSrc);
-        const targetWorkflowsDir = path.join(projectOpencodeDir, "workflows");
-        if (await fs.pathExists(targetWorkflowsDir)) {
-          for (const workflow of workflows) {
-            try {
-              await fs.remove(path.join(targetWorkflowsDir, workflow));
-            } catch (e) {
-            }
-          }
-        }
-      }
-    }
-  } else if (targetPlatform === "claude") {
-    const agentFile = path.join(agentsDir, `${agentName}.md`);
-    if (await fs.pathExists(agentFile)) {
-      await fs.remove(agentFile);
-    }
-  } else if (targetPlatform === "copilot") {
-    const agentFile = path.join(agentsDir, `${agentName}.agent.md`);
-    if (await fs.pathExists(agentFile)) {
-      await fs.remove(agentFile);
-    }
-  }
-}
+import {
+  REPO_ROOT, AGENTS_ROOT, SKILLS_ROOT, PLATFORM_PATHS, PROJECT_LEVEL_PATHS,
+  detectProjectRoot, scanProjectAgents, scanAgents, detectPlatforms, scanInstalledAgents,
+  checkAgentExists, checkAgentExistsInProject, deployAgent, deployAgentToProject,
+  extractAgent, extractAgentFromProject, uninstallAgent, uninstallAgentFromProject,
+  scanProjectSkills, scanPlatformSkills, deploySkill, extractSkill, uninstallSkill, registry
+} from "./logic.js";
 var CONFIG_DIR = path.join(os.homedir(), ".config", "agentshare");
 var CONFIG_FILE_JSON = path.join(CONFIG_DIR, "config.json");
 var CONFIG_FILE_LEGACY = path.join(CONFIG_DIR, "config");
@@ -543,6 +44,12 @@ var STRINGS = {
     title: "AgentShare Intelligent Deployment Tool",
     installed_agents: "\u{1F4E6} Installed Agents",
     project_agents: "\u{1F4C1} Agents in Repository",
+    home_installed_platforms: "\u{1F4CA} Installed Platforms Overview",
+    home_global_agents: "Global Agents",
+    home_global_skills: "Global Skills",
+    home_project_agents: "Project Agents",
+    home_project_skills: "Project Skills",
+    home_no_platforms: "  (No platforms detected)",
     no_agents: "  (None)",
     menu_prompt: "Please select an operation:",
     menu_deploy: "Deploy Agent (Project \u2192 Platform)",
@@ -595,12 +102,36 @@ var STRINGS = {
     confirm_deploy_title: "\u26A0\uFE0F Conflict Detected",
     confirm_deploy_message: "Agent '%s' already exists on %s. Do you want to overwrite it?",
     confirm_yes: "Yes, Overwrite",
-    confirm_no: "No, Cancel"
+    confirm_no: "No, Cancel",
+    // V2.0 Skills
+    mode_select_title: "Welcome to AgentShare v2.0",
+    mode_select_prompt: "Please select management mode:",
+    mode_agent: "🤖 Agent Management",
+    mode_skill: "🛠️  Skills Management",
+    skill_dashboard_title: "Skills Management Dashboard",
+    project_skills: "📦 Skills in Repository",
+    no_skills: "  (None)",
+    menu_deploy_skill: "Deploy Skill (Project → Platform)",
+    menu_extract_skill: "Extract Skill (Platform → Project)",
+    menu_uninstall_skill: "Uninstall Skill",
+    deploy_select_skill: "Select Skill to Deploy:",
+    extract_select_skill: "Select Skill to Extract:",
+    uninstall_select_skill: "Select Skill to Uninstall:",
+    deploying_skill: "🚀 Deploying Skill %s to %s...",
+    success_deploy_skill: "✅ Successfully deployed Skill %s",
+    platform_global_config: "Global Config",
+    platform_project_config: "Project Config"
   },
   zh: {
-    title: "AgentShare \u667A\u80FD\u90E8\u7F72\u5DE5\u5177",
+    title: "AgentShare 智能部署工具",
     installed_agents: "\u{1F4E6} \u5DF2\u5B89\u88C5\u7684 Agents",
     project_agents: "\u{1F4C1} AgentShare\u4ED3\u5E93\u4E2D\u7684 Agents",
+    home_installed_platforms: "\u{1F4CA} \u5DF2\u5B89\u88C5\u5E73\u53F0\u6982\u89C8",
+    home_global_agents: "\u5168\u5C40 Agents",
+    home_global_skills: "\u5168\u5C40 Skills",
+    home_project_agents: "\u9879\u76EE Agents",
+    home_project_skills: "\u9879\u76EE Skills",
+    home_no_platforms: "  (\u672A\u68C0\u6D4B\u5230\u5DF2\u5B89\u88C5\u5E73\u53F0)",
     no_agents: "  (\u65E0)",
     menu_prompt: "\u8BF7\u9009\u62E9\u64CD\u4F5C:",
     menu_deploy: "\u90E8\u7F72 Agent (AgentShare \u2192 \u4F60\u7684 AI \u5DE5\u5177)",
@@ -653,7 +184,25 @@ var STRINGS = {
     confirm_deploy_title: "\u26A0\uFE0F \u51B2\u7A81\u68C0\u6D4B",
     confirm_deploy_message: "Agent '%s' \u5DF2\u5B58\u5728\u4E8E %s\u3002\u662F\u5426\u8986\u76D6\uFF1F",
     confirm_yes: "\u662F\uFF0C\u8986\u76D6",
-    confirm_no: "\u5426\uFF0C\u53D6\u6D88"
+    confirm_no: "\u5426\uFF0C\u53D6\u6D88",
+    // V2.0 Skills
+    mode_select_title: "欢迎使用 AgentShare v2.0",
+    mode_select_prompt: "请选择管理模式：",
+    mode_agent: "🤖 Agent 管理",
+    mode_skill: "🛠️  Skills 管理",
+    skill_dashboard_title: "Skills 管理控制台",
+    project_skills: "📦 仓库中的 Skills",
+    no_skills: "  (无)",
+    menu_deploy_skill: "部署 Skill (项目 → 平台)",
+    menu_extract_skill: "提取 Skill (平台 → 项目)",
+    menu_uninstall_skill: "卸载 Skill",
+    deploy_select_skill: "选择要部署的 Skill:",
+    extract_select_skill: "选择要提取的 Skill:",
+    uninstall_select_skill: "选择要卸载的 Skill:",
+    deploying_skill: "🚀 正在部署 Skill %s 到 %s...",
+    success_deploy_skill: "✅ 成功部署 Skill %s",
+    platform_global_config: "全局配置",
+    platform_project_config: "项目配置"
   }
 };
 function getText(key, lang = "zh", ...args) {
@@ -668,19 +217,102 @@ var Dashboard = ({ installed, projectInstalled, projectAgents, projectRoot, plat
   const projectName = projectRoot ? path2.basename(projectRoot) : null;
   return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginBottom: 1, width: "100%" }, /* @__PURE__ */ React.createElement(Box, { flexDirection: "row", gap: 2, width: "100%" }, /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "magenta", paddingX: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("global_installed_agents", lang)), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 }, /* @__PURE__ */ React.createElement(Text, { color: "green" }, "OpenCode CLI:"), installed.opencode.length > 0 ? installed.opencode.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang)), /* @__PURE__ */ React.createElement(Text, { color: "green", marginTop: 1 }, "Claude Code:"), installed.claude.length > 0 ? installed.claude.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang)), platforms.kilocode && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "green", marginTop: 1 }, "Kilo Code Plugin (VS Code):"), installed.kilocode.length > 0 ? installed.kilocode.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang))), /* @__PURE__ */ React.createElement(Text, { color: "green", marginTop: 1 }, "GitHub Copilot:"), installed.copilot.length > 0 ? installed.copilot.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang)))), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "cyan", paddingX: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("project_installed_agents", lang)), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 }, projectRoot ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "green" }, "OpenCode CLI:"), projectInstalled.opencode.length > 0 ? projectInstalled.opencode.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang)), /* @__PURE__ */ React.createElement(Text, { color: "green", marginTop: 1 }, "Claude Code:"), projectInstalled.claude.length > 0 ? projectInstalled.claude.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang)), /* @__PURE__ */ React.createElement(Text, { color: "green", marginTop: 1 }, "GitHub Copilot:"), projectInstalled.copilot.length > 0 ? projectInstalled.copilot.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang))) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("project_root_not_detected", lang)))), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "magenta", paddingX: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("project_agents", lang)), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 }, projectAgents.length > 0 ? projectAgents.map((a) => /* @__PURE__ */ React.createElement(Text, { key: a }, "  \u2022 ", a)) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_agents", lang))))), projectRoot && /* @__PURE__ */ React.createElement(Box, { marginTop: 1 }, /* @__PURE__ */ React.createElement(Text, { color: "yellow" }, getText("project_root_detected", lang, projectName))));
 };
+Dashboard = ({ platformSummaries = [], projectRoot, lang }) => {
+  const projectName = projectRoot ? path2.basename(projectRoot) : null;
+  const labelWidth = 14;
+  const columnWidth = labelWidth + 6;
+  const padLabel = (text) => text.padEnd(labelWidth, " ");
+  const renderCounts = (agentLabel, agentValue, skillLabel, skillValue, agentColor, skillColor) => /* @__PURE__ */ React.createElement(Box, { flexDirection: "row", marginLeft: 2 }, /* @__PURE__ */ React.createElement(Box, { width: columnWidth }, /* @__PURE__ */ React.createElement(Text, { color: agentColor }, padLabel(agentLabel)), /* @__PURE__ */ React.createElement(Text, { color: "white" }, String(agentValue))), /* @__PURE__ */ React.createElement(Box, { width: columnWidth }, /* @__PURE__ */ React.createElement(Text, { color: skillColor }, padLabel(skillLabel)), /* @__PURE__ */ React.createElement(Text, { color: "white" }, String(skillValue))));
+  const rows = platformSummaries.map((p) => /* @__PURE__ */ React.createElement(Box, { key: p.id, flexDirection: "column", marginBottom: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true, color: "green" }, p.displayName), renderCounts(getText("home_global_agents", lang), p.globalAgents, getText("home_global_skills", lang), p.globalSkills, "cyan", "magenta"), projectRoot ? renderCounts(getText("home_project_agents", lang), p.projectAgents, getText("home_project_skills", lang), p.projectSkills, "yellow", "blue") : null));
+  const list = platformSummaries.length > 0 ? rows : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("home_no_platforms", lang));
+  return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginBottom: 1, width: "100%" }, /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "magenta", paddingX: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("home_installed_platforms", lang)), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 }, list)), projectRoot && /* @__PURE__ */ React.createElement(Box, { marginTop: 1 }, /* @__PURE__ */ React.createElement(Text, { color: "yellow" }, getText("project_root_detected", lang, projectName))));
+};
 var MessageLog = ({ message }) => {
   if (!message) return null;
   return /* @__PURE__ */ React.createElement(Box, { borderStyle: "single", borderColor: "magenta", paddingX: 1, marginBottom: 1, justifyContent: "center", width: "100%" }, /* @__PURE__ */ React.createElement(Text, null, message));
 };
+// --- V2.0 Components ---
+
+var ModeSelectionScreen = ({ onSelect, lang }) => /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", alignItems: "center", justifyContent: "center", height: 15, borderStyle: "double", borderColor: "cyan", padding: 2 }, /* @__PURE__ */ React.createElement(Text, { color: "cyan", bold: true, marginBottom: 1 }, getText("mode_select_title", lang)), /* @__PURE__ */ React.createElement(Text, { marginBottom: 2 }, getText("mode_select_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, {
+  items: [
+    { label: getText("mode_agent", lang), value: "agent" },
+    { label: getText("mode_skill", lang), value: "skill" }
+  ], onSelect
+}));
+
+
+var SkillsDashboard = ({ projectSkills, globalSkills, projectConfigSkills, projectRoot, lang }) => {
+  const projectName = projectRoot ? path.basename(projectRoot) : null;
+  const allPlatforms = registry.getAllPlatforms();
+  const skillPlatforms = allPlatforms.filter((plt) => Array.isArray(plt.features) && plt.features.includes("skills"));
+
+  const renderList = (list) => {
+    if (!list || list.length === 0) return /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("no_skills", lang));
+    return list.map(s => /* @__PURE__ */ React.createElement(Text, { key: s }, "  \u2022 ", s));
+  };
+
+  return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginBottom: 1, width: "100%" },
+    /* @__PURE__ */ React.createElement(Text, { color: "cyan", bold: true, alignSelf: "center", marginBottom: 1 }, getText("skill_dashboard_title", lang)),
+    /* @__PURE__ */ React.createElement(Box, { flexDirection: "row", gap: 2, width: "100%" },
+        /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "blue", paddingX: 1 },
+            /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("platform_global_config", lang)),
+            /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 },
+    skillPlatforms.map(plt => {
+      const skills = globalSkills[plt.name];
+      // Only render if platform has global config capability (check logic or just check if skills array exists)
+      // If skills is undefined, maybe it wasn't scanned or not supported.
+      if (!skills) return null;
+      return /* @__PURE__ */ React.createElement(React.Fragment, { key: plt.name },
+                        /* @__PURE__ */ React.createElement(Text, { color: "green", marginTop: 1 }, plt.display_name + ":"),
+        renderList(skills)
+      );
+    })
+  )
+  ),
+        /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "green", paddingX: 1 },
+            /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("platform_project_config", lang)),
+    projectRoot ? /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 },
+      skillPlatforms.map(plt => {
+        const skills = projectConfigSkills[plt.name];
+        if (!skills) return null;
+        return /* @__PURE__ */ React.createElement(React.Fragment, { key: plt.name },
+                        /* @__PURE__ */ React.createElement(Text, { color: "green", marginTop: 1 }, plt.display_name + ":"),
+          renderList(skills)
+        );
+      })
+    ) : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("project_root_not_detected", lang))
+  ),
+        /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "magenta", paddingX: 1 },
+            /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("project_skills", lang)),
+            /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 }, renderList(projectSkills))
+  )
+  ),
+    projectRoot && /* @__PURE__ */ React.createElement(Box, { marginTop: 1 }, /* @__PURE__ */ React.createElement(Text, { color: "yellow" }, getText("project_root_detected", lang, projectName)))
+  );
+};
+
+
 var App = () => {
   const { exit } = useApp();
   const [lang, setLang] = useState("zh");
+  const [mode, setMode] = useState("select");
   const [isLangSelected, setIsLangSelected] = useState(false);
   const [activeTab, setActiveTab] = useState("menu");
   const [platforms, setPlatforms] = useState({ opencode: null, claude: null, kilocode: null, copilot: null });
   const [installedAgents, setInstalledAgents] = useState({ opencode: [], claude: [], kilocode: [], copilot: [] });
   const [projectAgents, setProjectAgents] = useState([]);
   const [projectInstalledAgents, setProjectInstalledAgents] = useState({ opencode: [], claude: [], kilocode: [], copilot: [] });
+  // Skills State
+  const [projectSkills, setProjectSkills] = useState([]);
+  // Dynamic State: Map<platformName, string[]>
+  const [globalSkills, setGlobalSkills] = useState({});
+  const [projectConfigSkills, setProjectConfigSkills] = useState({});
+
+  // Load registry on mount
+  useEffect(() => {
+    import('./logic.js').then(m => m.registry.load());
+  }, []);
+
   const [projectRoot, setProjectRoot] = useState(null);
   const [message, setMessage] = useState("");
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -696,7 +328,10 @@ var App = () => {
     } else {
     }
     const p = await detectPlatforms();
+    // p is { opencode: true, claude_code: true, ... }
     setPlatforms(p);
+
+    // Legacy Agent Scan (Mocked in logic.js for now)
     setInstalledAgents(await scanInstalledAgents(p));
     setProjectAgents(await scanAgents(AGENTS_ROOT));
     const pRoot = await detectProjectRoot();
@@ -704,6 +339,29 @@ var App = () => {
     if (pRoot) {
       setProjectInstalledAgents(await scanProjectAgents(pRoot));
     }
+
+    // Dynamic Skills Scan
+    setProjectSkills(await scanProjectSkills(pRoot));
+
+    const { registry } = await import('./logic.js');
+    const allPlatforms = registry.getAllPlatforms();
+    const skillPlatforms = allPlatforms.filter((plt) => Array.isArray(plt.features) && plt.features.includes("skills"));
+
+    const newGlobalSkills = {};
+    const newProjectConfigSkills = {};
+
+    for (const plt of skillPlatforms) {
+      // Global Scan
+      newGlobalSkills[plt.name] = await scanPlatformSkills(plt.name, 'global');
+
+      // Project Scan
+      if (pRoot) {
+        newProjectConfigSkills[plt.name] = await scanPlatformSkills(plt.name, 'project', pRoot);
+      }
+    }
+
+    setGlobalSkills(newGlobalSkills);
+    setProjectConfigSkills(newProjectConfigSkills);
   };
   useEffect(() => {
     refreshData();
@@ -712,10 +370,14 @@ var App = () => {
     setLang(newLang);
     await saveConfig({ language: newLang });
     setIsLangSelected(true);
-    setActiveTab("menu");
+    setActiveTab(mode === "settings" ? "settings_menu" : "menu");
   };
   useInput((input, key) => {
     if (key.escape) {
+      if (mode !== 'select' && activeTab === 'menu') {
+        setMode('select');
+        return;
+      }
       if (activeTab === "deploy_select_agent") setActiveTab("menu");
       else if (activeTab === "deploy_select_platform") setActiveTab("deploy_select_agent");
       else if (activeTab === "deploy_select_scope") setActiveTab("deploy_select_platform");
@@ -725,10 +387,32 @@ var App = () => {
       else if (activeTab === "uninstall_select_platform") setActiveTab("menu");
       else if (activeTab === "uninstall_select_scope") setActiveTab("uninstall_select_platform");
       else if (activeTab === "uninstall_select_agent") setActiveTab("uninstall_select_scope");
-      else if (activeTab === "settings_menu") setActiveTab("menu");
-      else if (activeTab === "settings_language") setActiveTab("settings_menu");
+      else if (activeTab === "settings_menu") {
+        if (mode === "settings") {
+          setMode("select");
+        } else {
+          setActiveTab("menu");
+        }
+      }
+      // Skill Tabs
+      else if (activeTab === "deploy_select_skill") setActiveTab("menu");
+      else if (activeTab === "uninstall_select_skill") setActiveTab("menu");
     }
   });
+
+  const handleModeSelect = (item) => {
+    if (item.value === "settings") {
+      setMode("settings");
+      setActiveTab("settings_menu");
+      return;
+    }
+    if (item.value === "exit") {
+      exit();
+      return;
+    }
+    setMode(item.value);
+    setActiveTab("menu");
+  };
   const handleMenuSelect = (item) => {
     if (item.value === "exit") {
       exit();
@@ -738,8 +422,8 @@ var App = () => {
       setActiveTab("extract_select_platform");
     } else if (item.value === "uninstall") {
       setActiveTab("uninstall_select_platform");
-    } else if (item.value === "settings") {
-      setActiveTab("settings_menu");
+    } else if (item.value === "back") {
+      setMode("select");
     }
   };
   const handleDeploySelectAgent = (item) => {
@@ -762,8 +446,16 @@ var App = () => {
     if (item.value === "back") {
       setActiveTab("deploy_select_platform");
     } else if (item.value === "global") {
+      if (mode === "skill") {
+        if (selectedPlatform === "all") {
+          await executeDeployGlobal("all");
+        } else {
+          await executeDeployGlobal(selectedPlatform);
+        }
+        return;
+      }
       if (selectedPlatform === "all") {
-        const allPlatforms = ["opencode", "claude", "kilocode", "copilot"];
+        const allPlatforms = getDeployPlatformsForScope("global");
         const newQueue = [];
         const safeToDeploy = [];
         for (const p of allPlatforms) {
@@ -791,13 +483,26 @@ var App = () => {
         executeDeployGlobal(selectedPlatform);
       }
     } else if (item.value === "project") {
+      if (mode === "skill") {
+        if (!projectRoot) {
+          setMessage(getText("project_root_not_detected", lang));
+          setActiveTab("menu");
+          return;
+        }
+        if (selectedPlatform === "all") {
+          await executeDeployProject("all");
+        } else {
+          await executeDeployProject(selectedPlatform);
+        }
+        return;
+      }
       if (!projectRoot) {
         setMessage(getText("project_root_not_detected", lang));
         setActiveTab("menu");
         return;
       }
       if (selectedPlatform === "all") {
-        const allPlatforms = ["opencode", "claude", "kilocode", "copilot"];
+        const allPlatforms = getDeployPlatformsForScope("project");
         const newQueue = [];
         const safeToDeploy = [];
         for (const p of allPlatforms) {
@@ -827,9 +532,37 @@ var App = () => {
     }
   };
   const executeDeployGlobal = async (platform, silent = false) => {
+    if (mode === 'skill') {
+      if (platform === "all") {
+        const platformsToDeploy = getDeployPlatformsForScope("global");
+        let errors = [];
+        for (const p of platformsToDeploy) {
+          try {
+            await deploySkill(selectedAgent, p, 'global', projectRoot);
+          } catch (e) { errors.push(`${p}: ${e.message}`); }
+        }
+        if (errors.length === 0) setMessage(getText("success_deploy_all", lang, selectedAgent));
+        else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+        if (silent) await refreshData();
+      } else {
+        if (!silent) setMessage(getText("deploying_skill", lang, selectedAgent, platform));
+        try {
+          await deploySkill(selectedAgent, platform, 'global', projectRoot);
+          if (!silent) {
+            setMessage(getText("success_deploy_skill", lang, selectedAgent));
+            await refreshData();
+          }
+        } catch (e) {
+          if (!silent) setMessage(getText("error_prefix", lang) + e.message);
+        }
+      }
+      if (!silent) setActiveTab("menu");
+      return;
+    }
+
     if (platform === "all") {
       setMessage(getText("deploying_to_all", lang, selectedAgent));
-      const allPlatforms = ["opencode", "claude", "kilocode", "copilot"];
+      const allPlatforms = getDeployPlatformsForScope("global");
       let successCount = 0;
       let errors = [];
       for (const p of allPlatforms) {
@@ -869,9 +602,37 @@ var App = () => {
     if (!silent) setActiveTab("menu");
   };
   const executeDeployProject = async (platform, silent = false) => {
+    if (mode === 'skill') {
+      if (platform === "all") {
+        const platformsToDeploy = getDeployPlatformsForScope("project");
+        let errors = [];
+        for (const p of platformsToDeploy) {
+          try {
+            await deploySkill(selectedAgent, p, 'project', projectRoot);
+          } catch (e) { errors.push(`${p}: ${e.message}`); }
+        }
+        if (errors.length === 0) setMessage(getText("success_deploy_all", lang, selectedAgent));
+        else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+        if (silent) await refreshData();
+      } else {
+        if (!silent) setMessage(getText("deploying_skill", lang, selectedAgent, platform));
+        try {
+          await deploySkill(selectedAgent, platform, 'project', projectRoot);
+          if (!silent) {
+            setMessage(getText("success_deploy_skill", lang, selectedAgent));
+            await refreshData();
+          }
+        } catch (e) {
+          if (!silent) setMessage(getText("error_prefix", lang) + e.message);
+        }
+      }
+      if (!silent) setActiveTab("menu");
+      return;
+    }
+    // Agent logic
     if (platform === "all") {
       setMessage(getText("deploying_to_all_project", lang, selectedAgent));
-      const allPlatforms = ["opencode", "claude", "kilocode", "copilot"];
+      const allPlatforms = getDeployPlatformsForScope("project");
       let successCount = 0;
       let errors = [];
       for (const p of allPlatforms) {
@@ -941,6 +702,32 @@ var App = () => {
   const handleExtractSelectAgent = async (item) => {
     if (item.value === "back") setActiveTab("extract_select_scope");
     else {
+      if (mode === "skill") {
+        if (selectedScope === "global") {
+          setMessage(getText("extracting", lang, item.value, selectedPlatform));
+          try {
+            await extractSkill(item.value, selectedPlatform, "global", projectRoot);
+            setMessage(getText("success_extract", lang, item.value));
+          } catch (e) {
+            setMessage(getText("error_prefix", lang) + e.message);
+          }
+        } else {
+          if (!projectRoot) {
+            setMessage(getText("project_root_not_detected", lang));
+            setActiveTab("menu");
+            return;
+          }
+          setMessage(getText("extracting_from_project", lang, item.value, selectedPlatform));
+          try {
+            await extractSkill(item.value, selectedPlatform, "project", projectRoot);
+            setMessage(getText("success_extract_project", lang, item.value));
+          } catch (e) {
+            setMessage(getText("error_prefix", lang) + e.message);
+          }
+        }
+        setActiveTab("menu");
+        return;
+      }
       if (selectedScope === "global") {
         setMessage(getText("extracting", lang, item.value, selectedPlatform));
         try {
@@ -984,6 +771,32 @@ var App = () => {
   const handleUninstallSelectAgent = async (item) => {
     if (item.value === "back") setActiveTab("uninstall_select_scope");
     else {
+      if (mode === "skill") {
+        if (selectedScope === "global") {
+          setMessage(getText("uninstalling", lang, item.value, selectedPlatform));
+          try {
+            await uninstallSkill(item.value, selectedPlatform, "global", projectRoot);
+            setMessage(getText("success_uninstall", lang, item.value));
+          } catch (e) {
+            setMessage(getText("error_prefix", lang) + e.message);
+          }
+        } else {
+          if (!projectRoot) {
+            setMessage(getText("project_root_not_detected", lang));
+            setActiveTab("menu");
+            return;
+          }
+          setMessage(getText("uninstalling_from_project", lang, item.value, selectedPlatform));
+          try {
+            await uninstallSkill(item.value, selectedPlatform, "project", projectRoot);
+            setMessage(getText("success_uninstall_project", lang, item.value));
+          } catch (e) {
+            setMessage(getText("error_prefix", lang) + e.message);
+          }
+        }
+        setActiveTab("menu");
+        return;
+      }
       if (selectedScope === "global") {
         setMessage(getText("uninstalling", lang, item.value, selectedPlatform));
         try {
@@ -1010,11 +823,13 @@ var App = () => {
     }
   };
   const handleSettingsSelect = (item) => {
-    if (item.value === "back") setActiveTab("menu");
-    else if (item.value === "language") setActiveTab("settings_language");
-  };
-  const handleSettingsLanguageSelect = (item) => {
-    if (item.value === "back") setActiveTab("settings_menu");
+    if (item.value === "back") {
+      if (mode === "settings") {
+        setMode("select");
+      } else {
+        setActiveTab("menu");
+      }
+    }
     else {
       changeLanguage(item.value);
     }
@@ -1022,44 +837,147 @@ var App = () => {
   const handleStartupLangSelect = (item) => {
     changeLanguage(item.value);
   };
+
+  // --- Skills Handlers ---
+  const handleSkillMenuSelect = (item) => {
+    if (item.value === "exit") exit();
+    else if (item.value === "deploy") setActiveTab("deploy_select_skill");
+    else if (item.value === "extract") setActiveTab("extract_select_platform");
+    else if (item.value === "uninstall") setActiveTab("uninstall_select_platform");
+    else if (item.value === "back") setMode("select");
+  };
+
+  const handleDeploySelectSkill = (item) => {
+    if (item.value === 'back') setActiveTab('menu');
+    else {
+      // Deploy Skill Flow
+      // For simplicity in V1 of Skills, let's just deploy to ALL supported global platforms?
+      // Or ask for platform?
+      // Document says: "Deploy Skill: Project Skill -> Platform Config"
+      // Let's implement a simple direct deploy for now or ask platform.
+      // Let's ask Platform. reuse handleDeploySelectPlatform? 
+      // Reusing state variables might be conflicting. 
+      // Let's use setSelectedAgent for Skill Name (reuse var or add new one?)
+      // Reuse selectedAgent for skillName for simplicity, or add selectedSkill.
+      setSelectedAgent(item.value); // Reusing variable to save lines
+      setActiveTab("deploy_select_platform");
+    }
+  };
+
+  // We reuse handleDeploySelectPlatform and Scope... 
+  // But executeDeploy needs to know if it's agent or skill.
+  // We can verify `mode` in executeDeploy?
+
+  const executeDeploySkill = async (skillName, platform, scope) => {
+    setMessage(getText("deploying_skill", lang, skillName, platform));
+    try {
+      await deploySkill(skillName, platform, scope, projectRoot);
+      setMessage(getText("success_deploy_skill", lang, skillName));
+      await refreshData();
+    } catch (e) {
+      setMessage(getText("error_prefix", lang) + e.message);
+    }
+    setActiveTab("menu");
+  };
+  const toLegacyPlatformName = (name) => {
+    if (name === "claude_code") return "claude";
+    if (name === "kilo_code") return "kilocode";
+    if (name === "github_copilot") return "copilot";
+    return name;
+  };
+  const toSchemaPlatformName = (name) => {
+    if (name === "claude") return "claude_code";
+    if (name === "kilocode") return "kilo_code";
+    if (name === "copilot") return "github_copilot";
+    return name;
+  };
+  const isProjectScopeSupported = (schema, outputKey, projectPathKey) => {
+    if (!schema) return false;
+    if (schema.project_paths && schema.project_paths[projectPathKey]) return true;
+    const target = schema.outputs && schema.outputs[outputKey] ? schema.outputs[outputKey].target : null;
+    if (!target) return false;
+    if (target.startsWith("~/")) return false;
+    if (path.isAbsolute(target)) return false;
+    return true;
+  };
+  const getDeployPlatformsForScope = (scope) => {
+    const base = mode === "skill" ? skillPlatforms : agentPlatforms;
+    const outputKey = mode === "skill" ? "skills" : "agent_definition";
+    const projectPathKey = mode === "skill" ? "skills" : "agents";
+    const filtered = scope === "project"
+      ? base.filter((plt) => isProjectScopeSupported(plt, outputKey, projectPathKey))
+      : base;
+    return filtered.map((plt) => toLegacyPlatformName(plt.name));
+  };
+  const allPlatforms = registry.getAllPlatforms();
+  const agentPlatforms = allPlatforms.filter((plt) => Array.isArray(plt.features) && plt.features.includes("agents"));
+  const skillPlatforms = allPlatforms.filter((plt) => Array.isArray(plt.features) && plt.features.includes("skills"));
+  const deployPlatforms = mode === "skill" ? skillPlatforms : agentPlatforms;
+  const platformSummaries = allPlatforms.map((plt) => {
+    const legacyName = toLegacyPlatformName(plt.name);
+    if (!platforms || !platforms[legacyName]) return null;
+    const globalAgentsCount = Array.isArray(installedAgents[legacyName]) ? installedAgents[legacyName].length : 0;
+    const projectAgentsCount = Array.isArray(projectInstalledAgents[legacyName]) ? projectInstalledAgents[legacyName].length : 0;
+    const globalSkillsList = globalSkills[plt.name];
+    const projectSkillsList = projectConfigSkills[plt.name];
+    const globalSkillsCount = Array.isArray(globalSkillsList) ? globalSkillsList.length : 0;
+    const projectSkillsCount = Array.isArray(projectSkillsList) ? projectSkillsList.length : 0;
+    return {
+      id: plt.name,
+      name: plt.name,
+      displayName: plt.display_name || plt.name,
+      globalAgents: globalAgentsCount,
+      projectAgents: projectAgentsCount,
+      globalSkills: globalSkillsCount,
+      projectSkills: projectSkillsCount
+    };
+  }).filter(Boolean);
   const menuItems = [
     { label: getText("menu_deploy", lang), value: "deploy" },
     { label: getText("menu_extract", lang), value: "extract" },
     { label: getText("menu_uninstall", lang), value: "uninstall" },
-    { label: getText("menu_settings", lang), value: "settings" },
-    { label: getText("menu_exit", lang), value: "exit" }
+    { label: getText("menu_back", lang), value: "back" },
+    { label: getText("menu_exit", lang), value: "exit" },
+  ];
+  const skillMenuItems = [
+    { label: getText("menu_deploy_skill", lang), value: "deploy" },
+    { label: getText("menu_extract_skill", lang), value: "extract" },
+    { label: getText("menu_uninstall_skill", lang), value: "uninstall" },
+    { label: getText("menu_back", lang), value: "back" },
+    { label: getText("menu_exit", lang), value: "exit" },
   ];
   const deployAgentItems = [...projectAgents.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
+  const deploySkillItems = [...projectSkills.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
+
   const deployPlatformItems = [
     { label: getText("platform_all", lang), value: "all" },
-    { label: "OpenCode CLI", value: "opencode" },
-    { label: "Claude Code", value: "claude" },
-    { label: "Kilo Code Plugin (VS Code)", value: "kilocode" },
-    { label: "GitHub Copilot", value: "copilot" },
+    ...deployPlatforms.map((plt) => ({ label: plt.display_name || plt.name, value: toLegacyPlatformName(plt.name) })),
     { label: getText("menu_back", lang), value: "back" }
   ];
   const platformItems = [
-    { label: "OpenCode CLI", value: "opencode" },
-    { label: "Claude Code", value: "claude" },
-    { label: "Kilo Code Plugin (VS Code)", value: "kilocode" },
-    { label: "GitHub Copilot", value: "copilot" },
+    ...deployPlatforms.map((plt) => ({ label: plt.display_name || plt.name, value: toLegacyPlatformName(plt.name) })),
     { label: getText("menu_back", lang), value: "back" }
   ];
   const settingsMenuItems = [
-    { label: getText("settings_language", lang), value: "language" },
-    { label: getText("menu_back", lang), value: "back" }
-  ];
-  const settingsLanguageItems = [
-    { label: "English", value: "en" },
-    { label: "\u7B80\u4F53\u4E2D\u6587", value: "zh" },
+    { label: lang === "en" ? "切换为中文" : "Change to English", value: lang === "en" ? "zh" : "en" },
     { label: getText("menu_back", lang), value: "back" }
   ];
   const startupLangItems = [{ label: "English", value: "en" }, { label: "\u7B80\u4F53\u4E2D\u6587", value: "zh" }];
-  const scopeItems = [
-    { label: getText("scope_global", lang), value: "global" },
-    { label: getText("scope_project", lang), value: "project" },
-    { label: getText("menu_back", lang), value: "back" }
-  ];
+  const isProjectScopeAvailable = () => {
+    if (!selectedPlatform || selectedPlatform === "all") return true;
+    const schema = allPlatforms.find((plt) => plt.name === toSchemaPlatformName(selectedPlatform));
+    const outputKey = mode === "skill" ? "skills" : "agent_definition";
+    const projectPathKey = mode === "skill" ? "skills" : "agents";
+    return isProjectScopeSupported(schema, outputKey, projectPathKey);
+  };
+  const getScopeItems = () => {
+    const items = [{ label: getText("scope_global", lang), value: "global" }];
+    if (isProjectScopeAvailable()) {
+      items.push({ label: getText("scope_project", lang), value: "project" });
+    }
+    items.push({ label: getText("menu_back", lang), value: "back" });
+    return items;
+  };
   const getPlatformAgents = (p) => {
     if (!p) return [];
     return installedAgents[p] || [];
@@ -1068,28 +986,90 @@ var App = () => {
     if (!p || !projectRoot) return [];
     return projectInstalledAgents[p] || [];
   };
+  const getPlatformSkills = (p, scope) => {
+    if (!p) return [];
+    const key = toSchemaPlatformName(p);
+    if (scope === "project") {
+      return projectConfigSkills[key] || [];
+    }
+    return globalSkills[key] || [];
+  };
+  const getExtractSelectItems = () => {
+    const items = mode === "skill"
+      ? getPlatformSkills(selectedPlatform, selectedScope)
+      : selectedScope === "global"
+        ? getPlatformAgents(selectedPlatform)
+        : getProjectPlatformAgents(selectedPlatform);
+    return [...items.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
+  };
+  const getUninstallSelectItems = () => {
+    const items = mode === "skill"
+      ? getPlatformSkills(selectedPlatform, selectedScope)
+      : selectedScope === "global"
+        ? getPlatformAgents(selectedPlatform)
+        : getProjectPlatformAgents(selectedPlatform);
+    return [...items.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
+  };
+  const extractSelectLabel = mode === "skill"
+    ? getText("extract_select_skill", lang)
+    : getText("extract_select_agent", lang);
+  const uninstallSelectLabel = mode === "skill"
+    ? getText("uninstall_select_skill", lang)
+    : getText("uninstall_select_agent", lang);
   if (!isLangSelected) {
     return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", alignItems: "center", justifyContent: "center", height: 15, borderStyle: "double", borderColor: "magenta", padding: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true, color: "magenta", marginBottom: 1 }, getText("lang_select_title", lang)), /* @__PURE__ */ React.createElement(Text, { color: "cyan", marginBottom: 1 }, getText("lang_select_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: startupLangItems, onSelect: handleStartupLangSelect }));
   }
-  return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", padding: 1 }, /* @__PURE__ */ React.createElement(Header, { lang }), /* @__PURE__ */ React.createElement(Dashboard, { installed: installedAgents, projectInstalled: projectInstalledAgents, projectAgents, projectRoot, platforms, lang }), /* @__PURE__ */ React.createElement(MessageLog, { message }), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 }, activeTab === "menu" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: menuItems, onSelect: handleMenuSelect })), activeTab === "deploy_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_agent", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployAgentItems, onSelect: handleDeploySelectAgent })), activeTab === "deploy_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployPlatformItems, onSelect: handleDeploySelectPlatform })), activeTab === "deploy_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: scopeItems, onSelect: handleDeploySelectScope })), activeTab === "deploy_confirm" && confirmationQueue.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "red", bold: true }, getText("confirm_deploy_title", lang)), /* @__PURE__ */ React.createElement(Text, { color: "yellow", marginBottom: 1 }, getText("confirm_deploy_message", lang, confirmationQueue[0].agent, confirmationQueue[0].platform === "all" ? getText("platform_all", lang) : confirmationQueue[0].platform)), /* @__PURE__ */ React.createElement(SelectInput, {
-    items: [
-      { label: getText("confirm_yes", lang), value: "yes" },
-      { label: getText("confirm_no", lang), value: "no" }
-    ],
-    onSelect: handleDeployConfirm
-  })), activeTab === "extract_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("extract_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, onSelect: handleExtractSelectPlatform })), activeTab === "extract_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: scopeItems, onSelect: handleExtractSelectScope })), activeTab === "extract_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("extract_select_agent", lang)), /* @__PURE__ */ React.createElement(SelectInput, {
-    items: [
-      ...(selectedScope === "global" ? getPlatformAgents(selectedPlatform) : getProjectPlatformAgents(selectedPlatform)).map((a) => ({ label: a, value: a })),
-      { label: getText("menu_back", lang), value: "back" }
-    ],
-    onSelect: handleExtractSelectAgent
-  })), activeTab === "uninstall_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("uninstall_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, onSelect: handleUninstallSelectPlatform })), activeTab === "uninstall_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: scopeItems, onSelect: handleUninstallSelectScope })), activeTab === "uninstall_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("uninstall_select_agent", lang)), /* @__PURE__ */ React.createElement(SelectInput, {
-    items: [
-      ...(selectedScope === "global" ? getPlatformAgents(selectedPlatform) : getProjectPlatformAgents(selectedPlatform)).map((a) => ({ label: a, value: a })),
-      { label: getText("menu_back", lang), value: "back" }
-    ],
-    onSelect: handleUninstallSelectAgent
-  })), activeTab === "settings_menu" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_settings", lang), ":"), /* @__PURE__ */ React.createElement(SelectInput, { items: settingsMenuItems, onSelect: handleSettingsSelect })), activeTab === "settings_language" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("settings_language", lang), ":"), /* @__PURE__ */ React.createElement(SelectInput, { items: settingsLanguageItems, onSelect: handleSettingsLanguageSelect }))));
+
+  // V2.0 Render Logic
+  if (mode === 'select') {
+    return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", padding: 1 },
+        /* @__PURE__ */ React.createElement(Header, { lang }),
+        /* @__PURE__ */ React.createElement(Dashboard, { platformSummaries, projectRoot, lang }),
+        /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 },
+          /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("mode_select_prompt", lang)),
+          /* @__PURE__ */ React.createElement(SelectInput, {
+            items: [
+              { label: getText("mode_agent", lang), value: "agent" },
+              { label: getText("mode_skill", lang), value: "skill" },
+              { label: getText("menu_settings", lang), value: "settings" },
+              { label: getText("menu_exit", lang), value: "exit" }
+            ],
+            onSelect: handleModeSelect
+          })
+        ),
+        /* @__PURE__ */ React.createElement(MessageLog, { message })
+    );
+  }
+
+  // Dashboard Props
+  const dashboard = mode === 'skill'
+    ? /* @__PURE__ */ React.createElement(SkillsDashboard, { projectSkills, globalSkills, projectConfigSkills, projectRoot, platforms, lang })
+    : /* @__PURE__ */ React.createElement(Dashboard, { platformSummaries, projectRoot, lang });
+
+  return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", padding: 1 }, /* @__PURE__ */ React.createElement(Header, { lang }), dashboard, /* @__PURE__ */ React.createElement(MessageLog, { message }), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 },
+    activeTab === "menu" && mode === 'agent' && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: menuItems, onSelect: handleMenuSelect })),
+    activeTab === "menu" && mode === 'skill' && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: skillMenuItems, onSelect: handleSkillMenuSelect })),
+
+    activeTab === "deploy_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_agent", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployAgentItems, onSelect: handleDeploySelectAgent })),
+
+    // Skill specific
+    activeTab === "deploy_select_skill" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_skill", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deploySkillItems, onSelect: handleDeploySelectSkill })),
+
+    activeTab === "deploy_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployPlatformItems, onSelect: handleDeploySelectPlatform })), activeTab === "deploy_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), onSelect: handleDeploySelectScope })),
+
+    activeTab === "deploy_confirm" && confirmationQueue.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "red", bold: true }, getText("confirm_deploy_title", lang)), /* @__PURE__ */ React.createElement(Text, { color: "yellow", marginBottom: 1 }, getText("confirm_deploy_message", lang, confirmationQueue[0].agent, confirmationQueue[0].platform === "all" ? getText("platform_all", lang) : confirmationQueue[0].platform)), /* @__PURE__ */ React.createElement(SelectInput, {
+      items: [
+        { label: getText("confirm_yes", lang), value: "yes" },
+        { label: getText("confirm_no", lang), value: "no" }
+      ],
+      onSelect: handleDeployConfirm
+    })), activeTab === "extract_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("extract_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, onSelect: handleExtractSelectPlatform })), activeTab === "extract_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), onSelect: handleExtractSelectScope })), activeTab === "extract_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, extractSelectLabel), /* @__PURE__ */ React.createElement(SelectInput, {
+      items: getExtractSelectItems(),
+      onSelect: handleExtractSelectAgent
+    })), activeTab === "uninstall_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("uninstall_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, onSelect: handleUninstallSelectPlatform })), activeTab === "uninstall_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), onSelect: handleUninstallSelectScope })), activeTab === "uninstall_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, uninstallSelectLabel), /* @__PURE__ */ React.createElement(SelectInput, {
+      items: getUninstallSelectItems(),
+      onSelect: handleUninstallSelectAgent
+    })), activeTab === "settings_menu" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_settings", lang), ":"), /* @__PURE__ */ React.createElement(SelectInput, { items: settingsMenuItems, onSelect: handleSettingsSelect }))));
 };
 process.on("exit", () => {
   process.stdout.write("\x1B[2J\x1B[3J\x1B[H");

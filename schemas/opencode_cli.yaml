@@ -1,0 +1,109 @@
+name: opencode_cli
+display_name: OpenCode CLI
+requires_restart: true
+
+target_detection:
+  paths:
+    - ~/.config/opencode
+    - ~/.opencode
+    - ~/Library/Application Support/OpenCode
+
+outputs:
+  agent_definition:
+    target: agents/{agent_name}.md
+    format: markdown_with_frontmatter
+    frontmatter:
+      - name
+      - description
+      - mode: platforms.opencode.mode
+      - temperature: platforms.opencode.temperature
+    include_body: true
+    exclude_fields:
+      - model
+
+  skill_config:
+    target: opencode.json
+    format: json
+    key: mcp
+    template: |
+      {
+        "$schema": "https://opencode.ai/config.json",
+        "mcp": {mcps}
+      }
+
+  config:
+    target: opencode.json
+    format: json
+    template: |
+      {
+        "$schema": "https://opencode.ai/config.json",
+        "mcp": {mcps}
+      }
+    exclude_fields:
+      - model
+
+  skills:
+    source: skills/
+    target: skills/
+    type: directory
+
+  workflows:
+    source: workflows/
+    target: workflows/
+    type: directory
+
+  docs:
+    source: docs/
+    target: "{agent_name}_docs/"
+    type: directory
+    optional: true
+
+project_paths:
+  agents: .opencode/agents/
+  skills: .opencode/skills/
+  config: .opencode/opencode.json
+  commands: .opencode/commands/
+
+features:
+  - agents
+  - skills
+  - mcps
+  - tools
+  - docs
+
+capabilities:
+  - id: agents.primary
+    status: supported
+    platform_term: primary agent
+    neutral_semantics: 可由用户直接选择的主对话角色
+    evidence:
+      - https://opencode.ai/docs/agents/
+  - id: agents.subagent
+    status: supported
+    platform_term: subagent
+    neutral_semantics: 可被主 agent 调用的子角色
+    evidence:
+      - https://opencode.ai/docs/agents/
+  - id: skills.agent_skills
+    status: supported
+    platform_term: skills
+    neutral_semantics: 以 SKILL.md 目录为单位的可加载能力
+    evidence:
+      - https://opencode.ai/docs/skills
+  - id: tools.permission
+    status: supported
+    platform_term: tools permissions
+    neutral_semantics: 按 agent 维度限制工具访问
+    evidence:
+      - https://opencode.ai/docs/agents/
+  - id: mcps
+    status: supported
+    platform_term: mcp servers
+    neutral_semantics: 通过配置文件加载 MCP 工具
+    evidence:
+      - https://opencode.ai/docs/config/
+  - id: instructions.project
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 项目级固定规则/指令文件
+    evidence: []

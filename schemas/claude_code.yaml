@@ -1,22 +1,14 @@
-# Claude Code Platform Schema
-# 定义如何从统一 Agent 定义生成 Claude Code 专用格式
-
 name: claude_code
 display_name: Claude Code
+requires_restart: true
 
-# 目标目录检测
 target_detection:
   paths:
     - ~/.claude
     - ~/.config/claude
     - ~/Library/Application Support/Claude
 
-# 部署后是否需要重启
-requires_restart: true
-
-# 输出配置
 outputs:
-  # 1. Agent 定义文件
   agent_definition:
     target: agents/{agent_name}.md
     format: markdown_with_frontmatter
@@ -27,27 +19,66 @@ outputs:
       - model: platforms.claude_code.model
     include_body: true
 
-  # 2. Skills 目录
+  skill_config:
+    target: ~/Library/Application Support/Claude/claude_desktop_config.json
+    format: json
+    key: mcpServers
+
   skills:
     source: skills/
-    target: ~/.claude/skills  # 用户指定路径
+    target: ~/.claude/skills
     type: directory
-    
-  # 3. 文档目录
+
   docs:
     source: docs/
     target: "{agent_name}_docs/"
     type: directory
     optional: true
 
-# 项目级路径配置
 project_paths:
   agents: .claude/agents/
-  settings: .claude/settings.json
-  main_prompt: CLAUDE.md
+  skills: .claude/skills/
+  config: .claude/settings.json
 
-# 支持的功能
 features:
+  - agents
   - tools
   - skills
+  - mcps
   - docs
+
+capabilities:
+  - id: agents.primary
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 可由用户直接选择的主对话角色
+    evidence: []
+  - id: agents.subagent
+    status: supported
+    platform_term: subagent
+    neutral_semantics: 可被主会话调用的子角色
+    evidence:
+      - https://code.claude.com/docs/en/sub-agents
+  - id: skills.agent_skills
+    status: supported
+    platform_term: skills
+    neutral_semantics: 以 SKILL.md 目录为单位的可加载能力
+    evidence:
+      - https://code.claude.com/docs/en/skills
+  - id: tools.permission
+    status: supported
+    platform_term: permissions
+    neutral_semantics: 按配置限制工具访问策略
+    evidence:
+      - https://code.claude.com/docs/en/settings
+  - id: mcps
+    status: supported
+    platform_term: mcpServers
+    neutral_semantics: 通过配置文件加载 MCP 工具
+    evidence:
+      - https://code.claude.com/docs/en/settings
+  - id: instructions.project
+    status: unsupported
+    platform_term: null
+    neutral_semantics: 项目级固定规则/指令文件
+    evidence: []
