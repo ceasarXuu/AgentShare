@@ -4,15 +4,16 @@
 
 ## AgentShare Deployment Tool
 
-AgentShare Intelligent Deployment Tool - Supports Agent scanning, deployment, and extraction, providing a modern TUI experience using Node.js + Ink.
+AgentShare Intelligent Deployment Tool - Supports cross-platform Agent/Skill management with a modern TUI experience using Node.js + Ink.
 
 ### Features
 
-- 🔍 **Auto Scan**: Detect installed Agents in OpenCode, Claude Code, and Kilo Code
-- 📦 **Smart Deploy**: Deploy Agents from the project to different platforms
-- 📥 **Extraction**: Extract Agents from platforms to the project
+- 🔍 **Platform Detection**: Detect installed platforms from schema-defined paths
+- 📊 **Overview Dashboard**: Show global/project Agent & Skill counts per platform
+- 🤖 **Agent Management**: Deploy/Extract/Uninstall Agents (where supported)
+- 🛠️  **Skill Management**: Deploy/Extract/Uninstall Skills (where supported)
+- 🔧 **MCP Sync**: Apply MCP server config when deploying Agents (where supported)
 - 🎨 **Modern UI**: Smooth interactive interface using Ink
-- ⚡️ **Clean Mode**: Automatically clears screen to keep terminal tidy
 - 🌐 **Multi-language**: Built-in English and Simplified Chinese support (Startup Selection)
 
 ### Quick Start
@@ -76,24 +77,25 @@ rm ~/.local/bin/agentshare
 ### Main Functions
 
 1. **Deploy Agent (Project → Platform)**
-   - Deploy project Agents to OpenCode, Claude Code, or Kilo Code (VS Code)
+   - Deploy repository Agents to platforms that support Agents (based on schemas)
    - Support simultaneous deployment to multiple platforms
-   - Auto copy configs, Skills, Workflows, etc.
+   - Sync MCP server config when supported by the platform
 
 2. **Extract Agent (Platform → Project)**
-   - Extract installed Agents from OpenCode, Claude Code, or Kilo Code
-   - Preserve directory structure
-   - Auto generate README
+   - Extract Agent definitions from a platform back into the repository
+
+3. **Uninstall Agent**
+   - Remove an Agent from a platform (where supported)
+
+4. **Skill Management**
+   - Deploy/Extract/Uninstall Skills to/from platforms that support Skills
+   - Support both global scope and project scope (when platform schema provides project paths)
 
 ---
 
 ## Available Agents
 
-This project hosts multiple specialized AI Agents. Current agent list:
-
-## Available Agents
-
-### 1. [kuko](agents/kuko/README.md)
+### 1. [kuko](agents/kuko/agent.md)
 **Business Opportunity Researcher**
 Designed for independent developers and small teams to quickly identify the most valuable App/software product directions worth pursuing, and advance opportunities from "ideas" to "verifiable solutions" within limited time.
 
@@ -101,21 +103,21 @@ Designed for independent developers and small teams to quickly identify the most
 
 ## Project Structure
 
-- `agents/`: Directory for all agents
-  - `kuko/`: Business Opportunity Researcher Agent
-    - `opencode/`: OpenCode configuration
-    - `claude/`: Claude Code configuration
-    - `shared/`: Shared resources (Skills, Workflows, Docs)
-    - *Note: Kilo Code uses the main `agent.md` directly.*
+- `agents/`: Agent definitions (neutral format)
+  - `<agent_name>/agent.md`: Agent definition file (Markdown + frontmatter)
+  - `<agent_name>/docs/`: Optional agent docs
+  - `<agent_name>/workflows/`: Optional workflows
+- `skills/`: Reusable Skills (each skill has a `SKILL.md`)
+- `schemas/`: Platform schemas that define detection paths, outputs, and capabilities
 
 ---
 
 ## Quick Start
 
 ### Using kuko
-1. Ensure OpenCode is installed.
-2. Configure the `.env` file (refer to `agents/kuko/.env.example`).
-3. Select the kuko Agent and start chatting.
+1. Install and run AgentShare: `agentshare`
+2. Select **Agent Management** → **Deploy Agent** and choose `kuko`
+3. Select the target platform and scope (global/project) where supported
 
 ---
 
@@ -123,14 +125,14 @@ Designed for independent developers and small teams to quickly identify the most
 
 ### Required API Keys
 
-You only need to configure **2** MCP tool API keys:
+If you use MCP servers that require credentials, configure these environment variables where your platform reads them:
 
 1. **GITHUB_TOKEN** - For GitHub MCP tool
 2. **BRAVE_API_KEY** - For Brave Search MCP tool
 
-### Not Required in .env
+### Not Required Here
 
-The following AI model API keys are **NOT** needed in your `.env` file, as they are managed by OpenCode/Claude Code:
+The following AI model API keys are typically managed by your platform (e.g., OpenCode/Claude Code) rather than this repository:
 
 - ❌ ANTHROPIC_API_KEY (Claude models)
 - ❌ OPENAI_API_KEY (GPT models)
@@ -220,48 +222,14 @@ BSAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## Configuration Steps
 
-### 1. Create .env File
+### Set Environment Variables
 
 ```bash
-cd agents/kuko
-cp .env.example .env
+export GITHUB_TOKEN=ghp_your_actual_github_token_here
+export BRAVE_API_KEY=BSA_your_actual_brave_api_key_here
 ```
 
-### 2. Edit .env File
-
-```bash
-# Use your preferred editor
-vim .env
-# or
-code .env
-# or
-open -e .env
-```
-
-### 3. Add Your Keys
-
-Only fill in these two:
-
-```bash
-GITHUB_TOKEN=ghp_your_actual_github_token_here
-BRAVE_API_KEY=BSA_your_actual_brave_api_key_here
-```
-
-**Do NOT** include these (comment out or delete):
-
-```bash
-# ANTHROPIC_API_KEY=...  # ← Not needed
-# OPENAI_API_KEY=...     # ← Not needed
-# GEMINI_API_KEY=...     # ← Not needed
-```
-
-### 4. Load Environment Variables
-
-```bash
-source .env
-```
-
-### 5. Verify Configuration
+### Verify Configuration
 
 ```bash
 echo $GITHUB_TOKEN    # Should display your token
@@ -302,14 +270,13 @@ echo $BRAVE_API_KEY   # Should display your API key
 **A**: 
 - **GitHub Token**: Immediately delete the old token at https://github.com/settings/tokens and generate a new one
 - **Brave API Key**: Regenerate in the Brave Dashboard
-- **Check**: Ensure `.env` is in `.gitignore` and won't be committed to Git
+- **Check**: Ensure keys are not committed to Git and are stored in a secret manager when possible
 
 ---
 
 ## Security Best Practices
 
 1. **Don't Commit to Git**
-   - `.env` is already in `.gitignore`
    - Don't hardcode keys in code
 
 2. **Regular Rotation**
@@ -336,13 +303,8 @@ echo $BRAVE_API_KEY   # Should display your API key
 echo $GITHUB_TOKEN
 echo $BRAVE_API_KEY
 
-# 2. Confirm .env file exists
-ls -la .env
-
-# 3. Reload environment variables
-source .env
-
-# 4. Check key format
+# 2. Restart the process that runs your platform/CLI if needed
+# 3. Check key format
 # GitHub Token should start with ghp_
 # Brave API Key should start with BSA
 ```
@@ -369,5 +331,5 @@ source .env
 
 ## Related Documentation
 
-- [AGENT_SPEC_en.md](AGENT_SPEC_en.md) - Agent Design and Development Specification
-- [agents/kuko/README.md](agents/kuko/README.md) - kuko Agent Documentation
+- [AGENTS.md](AGENTS.md) - Project background and rules
+- [agent.md](agents/kuko/agent.md) - kuko Agent definition

@@ -4,6 +4,7 @@
 # 基础信息
 name: platform_name
 display_name: Platform Display Name
+sort_order: 999
 requires_restart: false
 
 # 平台安装目录探测

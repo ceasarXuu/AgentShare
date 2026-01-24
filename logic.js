@@ -62,14 +62,17 @@ function expandPath(p) {
 }
 
 const PLATFORM_ALIASES = {
+    opencode: 'opencode_cli',
     claude: 'claude_code',
-    kilocode: 'kilo_code',
+    kilocode: 'kilo_code_vscode',
     copilot: 'github_copilot'
 };
 
 const PLATFORM_REVERSE_ALIASES = {
+    opencode_cli: 'opencode',
     claude_code: 'claude',
     kilo_code: 'kilocode',
+    kilo_code_vscode: 'kilocode',
     github_copilot: 'copilot'
 };
 
@@ -127,9 +130,9 @@ export async function loadConfig() {
 }
 
 export async function detectProjectRoot() {
-    // Simple detection: check for .git or specific platform project files
-    // This logic can stay hardcoded or be generic if schemas defined "project_root_indicators"
-    // For now, assume CWD
+    if (process.env.AGENTSHARE_PROJECT_ROOT) {
+        return process.env.AGENTSHARE_PROJECT_ROOT;
+    }
     return process.cwd();
 }
 
@@ -161,9 +164,13 @@ export const PLATFORM_PATHS = new Proxy({}, {
 
 export async function checkAgentExists(agentName, platform) {
     try {
-        const { targetTemplate } = await resolveAgentDefinitionTarget(platform, 'global');
-        const targetPath = targetTemplate.replace('{agent_name}', agentName);
-        return await fs.pathExists(targetPath);
+        const resolved = await resolveAgentTarget(platform, 'global');
+        if (resolved.kind === 'agent_definition') {
+            const targetPath = resolved.targetTemplate.replace('{agent_name}', agentName);
+            return await fs.pathExists(targetPath);
+        }
+        const modes = await readCustomModes(resolved.targetPath);
+        return modes.some((m) => m && m.slug === agentName);
     } catch (e) {
         return false;
     }
@@ -171,9 +178,13 @@ export async function checkAgentExists(agentName, platform) {
 
 export async function checkAgentExistsInProject(agentName, platform, projectRoot) {
     try {
-        const { targetTemplate } = await resolveAgentDefinitionTarget(platform, 'project', projectRoot);
-        const targetPath = targetTemplate.replace('{agent_name}', agentName);
-        return await fs.pathExists(targetPath);
+        const resolved = await resolveAgentTarget(platform, 'project', projectRoot);
+        if (resolved.kind === 'agent_definition') {
+            const targetPath = resolved.targetTemplate.replace('{agent_name}', agentName);
+            return await fs.pathExists(targetPath);
+        }
+        const modes = await readCustomModes(resolved.targetPath);
+        return modes.some((m) => m && m.slug === agentName);
     } catch (e) {
         return false;
     }
@@ -184,28 +195,48 @@ export async function deployAgentToProject(agentName, platform, projectRoot) {
 }
 
 export async function extractAgent(agentName, platform) {
-    const { targetTemplate, schema, agentDef, normalized } = await resolveAgentDefinitionTarget(platform, 'global');
-    const targetPath = targetTemplate.replace('{agent_name}', agentName);
-    if (!await fs.pathExists(targetPath)) throw new Error(`Agent ${agentName} not found`);
-    const content = await fs.readFile(targetPath, 'utf8');
-    const { frontmatter, body } = parseFrontmatter(content);
-    if (!frontmatter) throw new Error('Agent frontmatter missing');
-    const neutralFrontmatter = buildNeutralFrontmatterFromPlatform(frontmatter, schema, normalized, agentName);
-    const output = buildAgentMarkdown(neutralFrontmatter, body, true);
+    const resolved = await resolveAgentTarget(platform, 'global');
+    let output;
+    if (resolved.kind === 'agent_definition') {
+        const targetPath = resolved.targetTemplate.replace('{agent_name}', agentName);
+        if (!await fs.pathExists(targetPath)) throw new Error(`Agent ${agentName} not found`);
+        const content = await fs.readFile(targetPath, 'utf8');
+        const { frontmatter, body } = parseFrontmatter(content);
+        if (!frontmatter) throw new Error('Agent frontmatter missing');
+        const neutralFrontmatter = buildNeutralFrontmatterFromPlatform(frontmatter, resolved.schema, resolved.normalized, agentName);
+        output = buildAgentMarkdown(neutralFrontmatter, body, true);
+    } else {
+        const modes = await readCustomModes(resolved.targetPath);
+        const mode = modes.find((m) => m && m.slug === agentName);
+        if (!mode) throw new Error(`Agent ${agentName} not found`);
+        const neutralFrontmatter = buildNeutralFrontmatterFromKiloMode(mode, resolved.normalized);
+        const body = buildAgentBodyFromKiloMode(mode);
+        output = buildAgentMarkdown(neutralFrontmatter, body, true);
+    }
     const agentDir = path.join(REPO_ROOT, 'agents', agentName);
     await fs.ensureDir(agentDir);
     await fs.writeFile(path.join(agentDir, 'agent.md'), output);
 }
 
 export async function extractAgentFromProject(agentName, platform, projectRoot) {
-    const { targetTemplate, schema, agentDef, normalized } = await resolveAgentDefinitionTarget(platform, 'project', projectRoot);
-    const targetPath = targetTemplate.replace('{agent_name}', agentName);
-    if (!await fs.pathExists(targetPath)) throw new Error(`Agent ${agentName} not found`);
-    const content = await fs.readFile(targetPath, 'utf8');
-    const { frontmatter, body } = parseFrontmatter(content);
-    if (!frontmatter) throw new Error('Agent frontmatter missing');
-    const neutralFrontmatter = buildNeutralFrontmatterFromPlatform(frontmatter, schema, normalized, agentName);
-    const output = buildAgentMarkdown(neutralFrontmatter, body, true);
+    const resolved = await resolveAgentTarget(platform, 'project', projectRoot);
+    let output;
+    if (resolved.kind === 'agent_definition') {
+        const targetPath = resolved.targetTemplate.replace('{agent_name}', agentName);
+        if (!await fs.pathExists(targetPath)) throw new Error(`Agent ${agentName} not found`);
+        const content = await fs.readFile(targetPath, 'utf8');
+        const { frontmatter, body } = parseFrontmatter(content);
+        if (!frontmatter) throw new Error('Agent frontmatter missing');
+        const neutralFrontmatter = buildNeutralFrontmatterFromPlatform(frontmatter, resolved.schema, resolved.normalized, agentName);
+        output = buildAgentMarkdown(neutralFrontmatter, body, true);
+    } else {
+        const modes = await readCustomModes(resolved.targetPath);
+        const mode = modes.find((m) => m && m.slug === agentName);
+        if (!mode) throw new Error(`Agent ${agentName} not found`);
+        const neutralFrontmatter = buildNeutralFrontmatterFromKiloMode(mode, resolved.normalized);
+        const body = buildAgentBodyFromKiloMode(mode);
+        output = buildAgentMarkdown(neutralFrontmatter, body, true);
+    }
     const agentDir = path.join(projectRoot, 'agents', agentName);
     await fs.ensureDir(agentDir);
     await fs.writeFile(path.join(agentDir, 'agent.md'), output);
@@ -213,10 +244,14 @@ export async function extractAgentFromProject(agentName, platform, projectRoot) 
 
 export async function uninstallAgent(agentName, platform) {
     try {
-        const { targetTemplate } = await resolveAgentDefinitionTarget(platform, 'global');
-        const targetPath = targetTemplate.replace('{agent_name}', agentName);
-        if (await fs.pathExists(targetPath)) {
-            await fs.remove(targetPath);
+        const resolved = await resolveAgentTarget(platform, 'global');
+        if (resolved.kind === 'agent_definition') {
+            const targetPath = resolved.targetTemplate.replace('{agent_name}', agentName);
+            if (await fs.pathExists(targetPath)) {
+                await fs.remove(targetPath);
+            }
+        } else {
+            await removeKiloMode(resolved.targetPath, agentName);
         }
         const agentPath = path.join(REPO_ROOT, 'agents', agentName, 'agent.md');
         if (await fs.pathExists(agentPath)) {
@@ -233,10 +268,14 @@ export async function uninstallAgent(agentName, platform) {
 
 export async function uninstallAgentFromProject(agentName, platform, projectRoot) {
     try {
-        const { targetTemplate } = await resolveAgentDefinitionTarget(platform, 'project', projectRoot);
-        const targetPath = targetTemplate.replace('{agent_name}', agentName);
-        if (await fs.pathExists(targetPath)) {
-            await fs.remove(targetPath);
+        const resolved = await resolveAgentTarget(platform, 'project', projectRoot);
+        if (resolved.kind === 'agent_definition') {
+            const targetPath = resolved.targetTemplate.replace('{agent_name}', agentName);
+            if (await fs.pathExists(targetPath)) {
+                await fs.remove(targetPath);
+            }
+        } else {
+            await removeKiloMode(resolved.targetPath, agentName);
         }
         const agentPath = path.join(projectRoot, 'agents', agentName, 'agent.md');
         if (await fs.pathExists(agentPath)) {
@@ -275,16 +314,21 @@ export async function scanInstalledAgents(platforms) {
         const legacyName = toLegacyPlatformName(platform.name);
         if (platforms && !platforms[legacyName]) continue;
         try {
-            const { targetTemplate } = await resolveAgentDefinitionTarget(platform.name, 'global');
-            const pattern = targetTemplate.replace('{agent_name}', '*');
-            const baseTemplate = path.basename(targetTemplate);
-            const regex = new RegExp('^' + baseTemplate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\{agent_name\\}', '(.+)') + '$');
-            const files = await glob(pattern, { nodir: true });
-            const names = files.map(f => {
-                const m = path.basename(f).match(regex);
-                return m ? m[1] : null;
-            }).filter(Boolean);
-            result[legacyName] = names;
+            const resolved = await resolveAgentTarget(platform.name, 'global');
+            if (resolved.kind === 'agent_definition') {
+                const pattern = resolved.targetTemplate.replace('{agent_name}', '*');
+                const baseTemplate = path.basename(resolved.targetTemplate);
+                const regex = new RegExp('^' + baseTemplate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\{agent_name\\}', '(.+)') + '$');
+                const files = await glob(pattern, { nodir: true });
+                const names = files.map(f => {
+                    const m = path.basename(f).match(regex);
+                    return m ? m[1] : null;
+                }).filter(Boolean);
+                result[legacyName] = names;
+            } else {
+                const modes = await readCustomModes(resolved.targetPath);
+                result[legacyName] = modes.map((m) => m && m.slug ? String(m.slug) : null).filter(Boolean);
+            }
         } catch (e) {
             result[legacyName] = [];
         }
@@ -299,16 +343,21 @@ export async function scanProjectAgents(projectRoot) {
     for (const platform of registry.getAllPlatforms()) {
         const legacyName = toLegacyPlatformName(platform.name);
         try {
-            const { targetTemplate } = await resolveAgentDefinitionTarget(platform.name, 'project', projectRoot);
-            const pattern = targetTemplate.replace('{agent_name}', '*');
-            const baseTemplate = path.basename(targetTemplate);
-            const regex = new RegExp('^' + baseTemplate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\{agent_name\\}', '(.+)') + '$');
-            const files = await glob(pattern, { nodir: true });
-            const names = files.map(f => {
-                const m = path.basename(f).match(regex);
-                return m ? m[1] : null;
-            }).filter(Boolean);
-            result[legacyName] = names;
+            const resolved = await resolveAgentTarget(platform.name, 'project', projectRoot);
+            if (resolved.kind === 'agent_definition') {
+                const pattern = resolved.targetTemplate.replace('{agent_name}', '*');
+                const baseTemplate = path.basename(resolved.targetTemplate);
+                const regex = new RegExp('^' + baseTemplate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\{agent_name\\}', '(.+)') + '$');
+                const files = await glob(pattern, { nodir: true });
+                const names = files.map(f => {
+                    const m = path.basename(f).match(regex);
+                    return m ? m[1] : null;
+                }).filter(Boolean);
+                result[legacyName] = names;
+            } else {
+                const modes = await readCustomModes(resolved.targetPath);
+                result[legacyName] = modes.map((m) => m && m.slug ? String(m.slug) : null).filter(Boolean);
+            }
         } catch (e) {
             result[legacyName] = [];
         }
@@ -327,12 +376,37 @@ export async function deployAgent(agentName, platformName, scope, projectRoot) {
     if (!frontmatter.name || frontmatter.name !== agentName) {
         throw new Error(`Agent frontmatter name mismatch: ${agentName}`);
     }
-    const { targetTemplate, schema, agentDef, normalized } = await resolveAgentDefinitionTarget(platformName, actualScope, root);
-    const outputFrontmatter = buildAgentFrontmatter(frontmatter, schema, normalized);
-    const output = buildAgentMarkdown(outputFrontmatter, agentDef.include_body ? body : '', agentDef.include_body);
-    const targetPath = targetTemplate.replace('{agent_name}', agentName);
-    await fs.ensureDir(path.dirname(targetPath));
-    await fs.writeFile(targetPath, output);
+    const resolved = await resolveAgentTarget(platformName, actualScope, root);
+    if (resolved.kind === 'agent_definition') {
+        const outputFrontmatter = buildAgentFrontmatter(frontmatter, resolved.schema, resolved.normalized);
+        const output = buildAgentMarkdown(outputFrontmatter, resolved.agentDef.include_body ? body : '', resolved.agentDef.include_body);
+        const targetPath = resolved.targetTemplate.replace('{agent_name}', agentName);
+        await fs.ensureDir(path.dirname(targetPath));
+        await fs.writeFile(targetPath, output);
+    } else {
+        const platformConfig = frontmatter.platforms && frontmatter.platforms[resolved.normalized] ? frontmatter.platforms[resolved.normalized] : null;
+        const modeName = platformConfig && platformConfig.name ? platformConfig.name : frontmatter.name;
+        const desc = platformConfig && platformConfig.description ? platformConfig.description : frontmatter.description;
+        const roleDefinition = platformConfig && platformConfig.roleDefinition ? platformConfig.roleDefinition : (body || '').trim();
+        const groups = platformConfig && Array.isArray(platformConfig.groups) ? platformConfig.groups : null;
+        const whenToUse = platformConfig && platformConfig.whenToUse !== undefined ? platformConfig.whenToUse : undefined;
+        const customInstructions = platformConfig && platformConfig.customInstructions !== undefined ? platformConfig.customInstructions : undefined;
+        if (!groups) {
+            throw new Error(`Platform ${platformName} requires platforms.${resolved.normalized}.groups for custom mode deployment`);
+        }
+        if (!roleDefinition) {
+            throw new Error('Agent body is required for custom mode deployment');
+        }
+        await upsertKiloMode(resolved.targetPath, {
+            slug: agentName,
+            name: modeName,
+            description: desc,
+            roleDefinition,
+            groups,
+            ...(whenToUse !== undefined ? { whenToUse } : {}),
+            ...(customInstructions !== undefined ? { customInstructions } : {})
+        });
+    }
     await applyMcps(frontmatter, platformName, actualScope, root);
 }
 
@@ -404,6 +478,125 @@ async function resolveDetectedPlatformRoot(schema) {
         }
     }
     return null;
+}
+
+async function resolveCustomModesTarget(platformName, scope, projectRoot) {
+    const { schema, normalized } = await getPlatformSchema(platformName);
+    if (!platformSupports(schema, 'agents')) {
+        throw new Error(`Platform ${platformName} does not support agents`);
+    }
+    const customDef = schema.outputs?.custom_modes;
+    if (!customDef) throw new Error(`Platform ${platformName} does not support custom modes`);
+
+    let targetPath;
+    if (scope === 'global') {
+        targetPath = expandPath(customDef.target);
+        if (!path.isAbsolute(targetPath)) {
+            const root = await resolveDetectedPlatformRoot(schema);
+            if (!root) throw new Error(`Platform ${platformName} not detected`);
+            targetPath = path.join(root, targetPath);
+        }
+    } else if (scope === 'project') {
+        if (!projectRoot) throw new Error("Project root required for project scope");
+        if (schema.project_paths && schema.project_paths.custom_modes) {
+            targetPath = path.join(projectRoot, schema.project_paths.custom_modes);
+        } else {
+            const candidate = expandPath(customDef.target);
+            if (path.isAbsolute(candidate)) {
+                throw new Error(`Platform ${platformName} does not support project-scoped custom modes`);
+            }
+            targetPath = path.join(projectRoot, candidate);
+        }
+    }
+    return { targetPath, schema, normalized, customDef };
+}
+
+async function resolveAgentTarget(platformName, scope, projectRoot) {
+    const { schema, normalized } = await getPlatformSchema(platformName);
+    if (!platformSupports(schema, 'agents')) {
+        throw new Error(`Platform ${platformName} does not support agents`);
+    }
+    if (schema.outputs?.agent_definition) {
+        const resolved = await resolveAgentDefinitionTarget(platformName, scope, projectRoot);
+        return { kind: 'agent_definition', ...resolved };
+    }
+    if (schema.outputs?.custom_modes) {
+        const resolved = await resolveCustomModesTarget(platformName, scope, projectRoot);
+        return { kind: 'custom_modes', ...resolved };
+    }
+    throw new Error(`Platform ${platformName} does not support agents`);
+}
+
+async function readCustomModes(targetPath) {
+    if (!await fs.pathExists(targetPath)) return [];
+    const raw = await fs.readFile(targetPath, 'utf8');
+    if (!raw.trim()) return [];
+    const parsed = yaml.load(raw);
+    if (!parsed || typeof parsed !== 'object') return [];
+    const obj = parsed;
+    const list = Array.isArray(obj.customModes)
+        ? obj.customModes
+        : Array.isArray(obj.custom_modes)
+            ? obj.custom_modes
+            : [];
+    return Array.isArray(list) ? list : [];
+}
+
+async function writeCustomModes(targetPath, modes) {
+    const payload = { customModes: modes };
+    const content = yaml.dump(payload, { lineWidth: 120 });
+    await fs.ensureDir(path.dirname(targetPath));
+    await fs.writeFile(targetPath, content);
+}
+
+function buildNeutralFrontmatterFromKiloMode(mode, platformName) {
+    const frontmatter = {
+        name: mode.slug,
+        description: mode.description
+    };
+    const platformConfig = {};
+    if (mode.name !== undefined) platformConfig.name = mode.name;
+    if (mode.slug !== undefined) platformConfig.slug = mode.slug;
+    if (mode.groups !== undefined) platformConfig.groups = mode.groups;
+    if (mode.whenToUse !== undefined) platformConfig.whenToUse = mode.whenToUse;
+    if (mode.customInstructions !== undefined) platformConfig.customInstructions = mode.customInstructions;
+    frontmatter.platforms = { [platformName]: platformConfig };
+    return frontmatter;
+}
+
+function buildAgentBodyFromKiloMode(mode) {
+    const parts = [];
+    if (mode.roleDefinition) parts.push(String(mode.roleDefinition).trim());
+    if (mode.customInstructions) parts.push(String(mode.customInstructions).trim());
+    return parts.filter(Boolean).join('\n\n').trim();
+}
+
+async function upsertKiloMode(targetPath, mode) {
+    const modes = await readCustomModes(targetPath);
+    const next = [];
+    let replaced = false;
+    for (const m of modes) {
+        if (m && m.slug === mode.slug) {
+            next.push(mode);
+            replaced = true;
+        } else {
+            next.push(m);
+        }
+    }
+    if (!replaced) next.push(mode);
+    await writeCustomModes(targetPath, next);
+}
+
+async function removeKiloMode(targetPath, slug) {
+    if (!await fs.pathExists(targetPath)) return;
+    const modes = await readCustomModes(targetPath);
+    const next = modes.filter((m) => !(m && m.slug === slug));
+    if (next.length === modes.length) return;
+    if (next.length === 0) {
+        await fs.remove(targetPath);
+        return;
+    }
+    await writeCustomModes(targetPath, next);
 }
 
 async function resolveAgentDefinitionTarget(platformName, scope, projectRoot) {

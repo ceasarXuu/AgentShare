@@ -1,5 +1,6 @@
 name: github_copilot
 display_name: GitHub Copilot (VS Code)
+sort_order: 4
 requires_restart: false
 
 target_detection:

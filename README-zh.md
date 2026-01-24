@@ -4,15 +4,16 @@
 
 ## AgentShare 部署工具
 
-AgentShare 智能部署工具 - 支持 Agent 扫描、部署和提取功能，使用 Node.js + Ink 提供现代化 TUI 体验。
+AgentShare 智能部署工具 - 提供跨平台 Agent/Skill 管理能力，使用 Node.js + Ink 提供现代化 TUI 体验。
 
 ### 功能特性
 
-- 🔍 **自动扫描**: 检测 OpenCode、Claude Code 和 Kilo Code 已安装的 Agents
-- 📦 **智能部署**: 将项目中的 Agents 部署到不同平台
-- 📥 **提取功能**: 从平台提取 Agents 到项目
+- 🔍 **平台探测**: 基于 schemas 定义的路径探测已安装的平台
+- 📊 **概览面板**: 按平台展示全局/项目的 Agent 与 Skill 数量
+- 📦 **Agent 管理**: 部署/提取/卸载 Agents（以平台 schema 能力为准）
+- 🛠️  **Skill 管理**: 部署/提取/卸载 Skills（以平台 schema 能力为准）
+- 🔧 **MCP 同步**: 部署 Agent 时写入 MCP 配置（平台支持时）
 - 🎨 **现代化 UI**: 使用 Ink 提供流畅的交互界面
-- ⚡️ **Clean Mode**: 自动清理屏幕，保持终端整洁
 - 🌐 **多语言支持**: 内置英文和简体中文支持 (Startup Selection)
 
 ### 快速开始
@@ -76,14 +77,19 @@ rm ~/.local/bin/agentshare
 ### 主要功能
 
 1. **部署 Agent (项目 → 平台)**
-   - 将项目中的 Agents 部署到 OpenCode、Claude Code 或 Kilo Code (VS Code)
+   - 将仓库中的 Agents 部署到支持 Agents 的平台（以 schemas 定义为准）
    - 支持同时部署到多个平台
-   - 自动复制配置、Skills、Workflows 等
+   - 平台支持时同步写入 MCP 配置
 
 2. **提取 Agent (平台 → 项目)**
-   - 从 OpenCode、Claude Code 或 Kilo Code 提取已安装的 Agents
-   - 保留完整的目录结构
-   - 自动生成 README
+   - 从平台提取 Agent 定义回仓库
+
+3. **卸载 Agent**
+   - 从平台移除 Agent（以平台 schema 能力为准）
+
+4. **Skill 管理**
+   - 在支持 Skills 的平台上部署/提取/卸载 Skills
+   - 支持全局 scope 与项目 scope（平台提供 project_paths 时）
 
 ---
 
@@ -91,7 +97,7 @@ rm ~/.local/bin/agentshare
 
 ## 可用的 Agents
 
-### 1. [kuko](agents/kuko/README.md)
+### 1. [kuko](agents/kuko/agent.md)
 **商业机会研究员**
 面向独立开发者与小团队，目标是在有限时间内快速找到当下最值得做的 App/软件产品方向，并把机会从"想法"推进到"可验证的方案"。
 
@@ -99,20 +105,21 @@ rm ~/.local/bin/agentshare
 
 ## 目录结构
 
-- `agents/`: 存放所有 Agent 的目录
-  - `kuko/`: 商业机会研究员 Agent
-    - `opencode/`: OpenCode 平台配置
-    - `claude/`: Claude Code 平台配置
-    - `shared/`: 共享资源 (Skills, Workflows, Docs)
+- `agents/`: Agent 定义（中立标准）
+  - `<agent_name>/agent.md`: Agent 定义文件（Markdown + frontmatter）
+  - `<agent_name>/docs/`: 可选文档
+  - `<agent_name>/workflows/`: 可选 workflows
+- `skills/`: 可复用 Skills（每个 skill 都包含 `SKILL.md`）
+- `schemas/`: 平台 schemas（路径探测、输出定义、能力声明）
 
 ---
 
 ## 快速开始
 
 ### 使用 kuko
-1. 确保已安装 OpenCode。
-2. 配置 `.env` 文件（参考 `agents/kuko/.env.example`）。
-3. 选择 kuko Agent 并开始对话。
+1. 安装并运行 AgentShare：`agentshare`
+2. 选择 **Agent 管理** → **部署 Agent** 并选择 `kuko`
+3. 选择目标平台与 scope（平台支持时可选全局/项目）
 
 ---
 
@@ -120,14 +127,14 @@ rm ~/.local/bin/agentshare
 
 ### 需要配置的 API 密钥
 
-只需要配置 **2 个** MCP 工具的 API 密钥:
+如果你使用需要鉴权的 MCP Server，请在平台读取的环境中配置以下环境变量：
 
 1. **GITHUB_TOKEN** - 用于 GitHub MCP 工具
 2. **BRAVE_API_KEY** - 用于 Brave Search MCP 工具
 
-### 不需要配置的 API 密钥
+### 本仓库不负责配置的密钥
 
-以下 AI 模型的 API 密钥**不需要**在 `.env` 中配置,因为它们由 OpenCode/Claude Code 统一管理:
+以下 AI 模型的 API 密钥通常由平台（例如 OpenCode/Claude Code）统一管理，而不是由本仓库配置：
 
 - ❌ ANTHROPIC_API_KEY (Claude 模型)
 - ❌ OPENAI_API_KEY (GPT 模型)
@@ -217,48 +224,14 @@ BSAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## 配置步骤
 
-### 1. 创建 .env 文件
+### 配置环境变量
 
 ```bash
-cd agents/kuko
-cp .env.example .env
+export GITHUB_TOKEN=ghp_your_actual_github_token_here
+export BRAVE_API_KEY=BSA_your_actual_brave_api_key_here
 ```
 
-### 2. 编辑 .env 文件
-
-```bash
-# 使用你喜欢的编辑器
-vim .env
-# 或
-code .env
-# 或
-open -e .env
-```
-
-### 3. 填入密钥
-
-只需要填入这两个:
-
-```bash
-GITHUB_TOKEN=ghp_your_actual_github_token_here
-BRAVE_API_KEY=BSA_your_actual_brave_api_key_here
-```
-
-**不需要**填入这些(注释掉或删除):
-
-```bash
-# ANTHROPIC_API_KEY=...  # ← 不需要
-# OPENAI_API_KEY=...     # ← 不需要
-# GEMINI_API_KEY=...     # ← 不需要
-```
-
-### 4. 加载环境变量
-
-```bash
-source .env
-```
-
-### 5. 验证配置
+### 验证配置
 
 ```bash
 echo $GITHUB_TOKEN    # 应该显示你的 token
@@ -299,14 +272,13 @@ echo $BRAVE_API_KEY   # 应该显示你的 API key
 **A**: 
 - **GitHub Token**: 立即在 https://github.com/settings/tokens 中删除旧 token,生成新的
 - **Brave API Key**: 在 Brave Dashboard 中重新生成
-- **检查**: 确保 `.env` 文件在 `.gitignore` 中,不会被提交到 Git
+- **检查**: 确保密钥没有被提交到 Git，优先使用密钥管理器保存
 
 ---
 
 ## 安全最佳实践
 
 1. **不要提交到 Git**
-   - `.env` 已在 `.gitignore` 中
    - 不要在代码中硬编码密钥
 
 2. **定期轮换**
@@ -333,13 +305,8 @@ echo $BRAVE_API_KEY   # 应该显示你的 API key
 echo $GITHUB_TOKEN
 echo $BRAVE_API_KEY
 
-# 2. 确认 .env 文件存在
-ls -la .env
-
-# 3. 重新加载环境变量
-source .env
-
-# 4. 检查密钥格式
+# 2. 如有需要，重启运行平台/CLI 的进程以重新读取环境变量
+# 3. 检查密钥格式
 # GitHub Token 应该以 ghp_ 开头
 # Brave API Key 应该以 BSA 开头
 ```
@@ -366,5 +333,5 @@ source .env
 
 ## 相关文档
 
-- [AGENT_SPEC_zh.md](AGENT_SPEC_zh.md) - Agent 设计与开发规范
-- [agents/kuko/README.md](agents/kuko/README.md) - kuko Agent 文档
+- [AGENTS.md](AGENTS.md) - 项目背景与规则
+- [agent.md](agents/kuko/agent.md) - kuko Agent 定义

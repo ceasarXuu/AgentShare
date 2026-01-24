@@ -18,6 +18,8 @@ if ! command -v npm &> /dev/null; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+ORIGINAL_CWD="$(pwd)"
+export AGENTSHARE_PROJECT_ROOT="$ORIGINAL_CWD"
 
 # Check if dependencies are installed
 if [ ! -d "$REPO_ROOT/node_modules" ]; then
@@ -26,7 +28,21 @@ if [ ! -d "$REPO_ROOT/node_modules" ]; then
 fi
 
 # Check if build exists, if not build it
-if [ ! -f "$REPO_ROOT/dist/index.js" ]; then
+BUILD_OUTPUT="$REPO_ROOT/dist/index.js"
+NEEDS_BUILD=false
+
+if [ ! -f "$BUILD_OUTPUT" ]; then
+    NEEDS_BUILD=true
+elif [ "$REPO_ROOT/index.js" -nt "$BUILD_OUTPUT" ] || [ "$REPO_ROOT/logic.js" -nt "$BUILD_OUTPUT" ]; then
+    NEEDS_BUILD=true
+elif [ -d "$REPO_ROOT/schemas" ]; then
+    NEWER_SCHEMA_FILE="$(find "$REPO_ROOT/schemas" -type f \( -name '*.yaml' -o -name '*.yml' \) -newer "$BUILD_OUTPUT" | head -n 1)"
+    if [ -n "$NEWER_SCHEMA_FILE" ]; then
+        NEEDS_BUILD=true
+    fi
+fi
+
+if [ "$NEEDS_BUILD" = true ]; then
     echo "Building TUI..."
     cd "$REPO_ROOT" && npm run build
 fi

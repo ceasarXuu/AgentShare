@@ -1,5 +1,6 @@
 name: opencode_cli
 display_name: OpenCode CLI
+sort_order: 1
 requires_restart: true
 
 target_detection:

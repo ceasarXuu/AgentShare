@@ -94,6 +94,8 @@ var STRINGS = {
     success_extract_project: "\u2705 Successfully extracted %s (project)",
     success_uninstall_project: "\u2705 Successfully uninstalled %s (project)",
     platform_all: "\u{1F30D} All Platforms",
+    agent_all: "\u{1F9F9} All Agents",
+    skill_all: "\u{1F9F9} All Skills",
     deploying_to_all: "\u{1F680} Deploying %s to all platforms...",
     deploying_to_all_project: "\u{1F680} Deploying %s to all platforms (project)...",
     success_deploy_all: "\u2705 Successfully deployed %s to all platforms",
@@ -176,6 +178,8 @@ var STRINGS = {
     success_extract_project: "\u2705 \u6210\u529F\u63D0\u53D6 %s (\u9879\u76EE)",
     success_uninstall_project: "\u2705 \u6210\u529F\u5378\u8F7D %s (\u9879\u76EE)",
     platform_all: "\u{1F30D} \u6240\u6709\u5E73\u53F0",
+    agent_all: "\u{1F9F9} \u6240\u6709 Agents",
+    skill_all: "\u{1F9F9} \u6240\u6709 Skills",
     deploying_to_all: "\u{1F680} \u6B63\u5728\u90E8\u7F72 %s \u5230\u6240\u6709\u5E73\u53F0...",
     deploying_to_all_project: "\u{1F680} \u6B63\u5728\u90E8\u7F72 %s \u5230\u6240\u6709\u5E73\u53F0 (\u9879\u76EE)...",
     success_deploy_all: "\u2705 \u6210\u529F\u90E8\u7F72 %s \u5230\u6240\u6709\u5E73\u53F0",
@@ -212,6 +216,13 @@ function getText(key, lang = "zh", ...args) {
   }
   return s;
 }
+function getSelectLimit() {
+  const rows = process.stdout && Number.isFinite(process.stdout.rows) ? process.stdout.rows : 24;
+  const candidate = Math.floor(rows - 12);
+  if (candidate < 6) return 6;
+  if (candidate > 20) return 20;
+  return candidate;
+}
 var Header = ({ lang }) => /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", alignItems: "center", marginBottom: 1, borderStyle: "double", borderColor: "magenta", paddingX: 2 }, /* @__PURE__ */ React.createElement(Text, { color: "magenta", bold: true }, getText("title", lang)));
 var Dashboard = ({ installed, projectInstalled, projectAgents, projectRoot, platforms = {}, lang }) => {
   const projectName = projectRoot ? path2.basename(projectRoot) : null;
@@ -222,8 +233,8 @@ Dashboard = ({ platformSummaries = [], projectRoot, lang }) => {
   const labelWidth = 14;
   const columnWidth = labelWidth + 6;
   const padLabel = (text) => text.padEnd(labelWidth, " ");
-  const renderCounts = (agentLabel, agentValue, skillLabel, skillValue, agentColor, skillColor) => /* @__PURE__ */ React.createElement(Box, { flexDirection: "row", marginLeft: 2 }, /* @__PURE__ */ React.createElement(Box, { width: columnWidth }, /* @__PURE__ */ React.createElement(Text, { color: agentColor }, padLabel(agentLabel)), /* @__PURE__ */ React.createElement(Text, { color: "white" }, String(agentValue))), /* @__PURE__ */ React.createElement(Box, { width: columnWidth }, /* @__PURE__ */ React.createElement(Text, { color: skillColor }, padLabel(skillLabel)), /* @__PURE__ */ React.createElement(Text, { color: "white" }, String(skillValue))));
-  const rows = platformSummaries.map((p) => /* @__PURE__ */ React.createElement(Box, { key: p.id, flexDirection: "column", marginBottom: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true, color: "green" }, p.displayName), renderCounts(getText("home_global_agents", lang), p.globalAgents, getText("home_global_skills", lang), p.globalSkills, "cyan", "magenta"), projectRoot ? renderCounts(getText("home_project_agents", lang), p.projectAgents, getText("home_project_skills", lang), p.projectSkills, "yellow", "blue") : null));
+  const renderCounts = (agentLabel, agentValue, skillLabel, skillValue, agentColor, skillColor) => /* @__PURE__ */ React.createElement(Box, { flexDirection: "row", marginLeft: 2 }, /* @__PURE__ */ React.createElement(Box, { width: columnWidth }, /* @__PURE__ */ React.createElement(Text, { color: agentColor }, padLabel(agentLabel)), /* @__PURE__ */ React.createElement(Text, { color: agentColor }, String(agentValue))), /* @__PURE__ */ React.createElement(Box, { width: columnWidth }, /* @__PURE__ */ React.createElement(Text, { color: skillColor }, padLabel(skillLabel)), /* @__PURE__ */ React.createElement(Text, { color: skillColor }, String(skillValue))));
+  const rows = platformSummaries.map((p) => /* @__PURE__ */ React.createElement(Box, { key: p.id, flexDirection: "column", marginBottom: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true, color: "green" }, p.displayName), renderCounts(getText("home_global_agents", lang), p.globalAgents, getText("home_global_skills", lang), p.globalSkills, "cyan", "cyan"), projectRoot ? renderCounts(getText("home_project_agents", lang), p.projectAgents, getText("home_project_skills", lang), p.projectSkills, "yellow", "yellow") : null));
   const list = platformSummaries.length > 0 ? rows : /* @__PURE__ */ React.createElement(Text, { color: "gray" }, getText("home_no_platforms", lang));
   return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginBottom: 1, width: "100%" }, /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", flexGrow: 1, borderStyle: "round", borderColor: "magenta", paddingX: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true }, getText("home_installed_platforms", lang)), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 }, list)), projectRoot && /* @__PURE__ */ React.createElement(Box, { marginTop: 1 }, /* @__PURE__ */ React.createElement(Text, { color: "yellow" }, getText("project_root_detected", lang, projectName))));
 };
@@ -237,7 +248,9 @@ var ModeSelectionScreen = ({ onSelect, lang }) => /* @__PURE__ */ React.createEl
   items: [
     { label: getText("mode_agent", lang), value: "agent" },
     { label: getText("mode_skill", lang), value: "skill" }
-  ], onSelect
+  ],
+  limit: getSelectLimit(),
+  onSelect
 }));
 
 
@@ -294,6 +307,7 @@ var SkillsDashboard = ({ projectSkills, globalSkills, projectConfigSkills, proje
 
 var App = () => {
   const { exit } = useApp();
+  const ALL_ITEMS_VALUE = "__all__";
   const [lang, setLang] = useState("zh");
   const [mode, setMode] = useState("select");
   const [isLangSelected, setIsLangSelected] = useState(false);
@@ -702,53 +716,156 @@ var App = () => {
   const handleExtractSelectAgent = async (item) => {
     if (item.value === "back") setActiveTab("extract_select_scope");
     else {
+      const platformsToRun = selectedPlatform === "all" ? getDeployPlatformsForScope(selectedScope) : [selectedPlatform];
       if (mode === "skill") {
+        let errors = [];
         if (selectedScope === "global") {
-          setMessage(getText("extracting", lang, item.value, selectedPlatform));
-          try {
-            await extractSkill(item.value, selectedPlatform, "global", projectRoot);
-            setMessage(getText("success_extract", lang, item.value));
-          } catch (e) {
-            setMessage(getText("error_prefix", lang) + e.message);
+          if (item.value === ALL_ITEMS_VALUE) {
+            setMessage(getText("extracting", lang, getText("skill_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+            const extracted = new Set();
+            for (const p of platformsToRun) {
+              const existing = getPlatformSkills(p, "global");
+              for (const skillName of existing) {
+                if (extracted.has(skillName)) continue;
+                try {
+                  await extractSkill(skillName, p, "global", projectRoot || undefined);
+                  extracted.add(skillName);
+                } catch (e) {
+                  errors.push(`${p}/${skillName}: ${e.message}`);
+                }
+              }
+            }
+            if (errors.length === 0) setMessage(getText("success_extract", lang, getText("skill_all", lang)));
+            else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+            setActiveTab("menu");
+            return;
           }
+          setMessage(getText("extracting", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          for (const p of platformsToRun) {
+            const existing = getPlatformSkills(p, "global");
+            if (!existing.includes(item.value)) continue;
+            try {
+              await extractSkill(item.value, p, "global", projectRoot || undefined);
+            } catch (e) {
+              errors.push(`${p}: ${e.message}`);
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_extract", lang, item.value));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
         } else {
           if (!projectRoot) {
             setMessage(getText("project_root_not_detected", lang));
             setActiveTab("menu");
             return;
           }
-          setMessage(getText("extracting_from_project", lang, item.value, selectedPlatform));
-          try {
-            await extractSkill(item.value, selectedPlatform, "project", projectRoot);
-            setMessage(getText("success_extract_project", lang, item.value));
-          } catch (e) {
-            setMessage(getText("error_prefix", lang) + e.message);
+          if (item.value === ALL_ITEMS_VALUE) {
+            setMessage(getText("extracting_from_project", lang, getText("skill_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+            const extracted = new Set();
+            for (const p of platformsToRun) {
+              const existing = getPlatformSkills(p, "project");
+              for (const skillName of existing) {
+                if (extracted.has(skillName)) continue;
+                try {
+                  await extractSkill(skillName, p, "project", projectRoot);
+                  extracted.add(skillName);
+                } catch (e) {
+                  errors.push(`${p}/${skillName}: ${e.message}`);
+                }
+              }
+            }
+            if (errors.length === 0) setMessage(getText("success_extract_project", lang, getText("skill_all", lang)));
+            else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+            setActiveTab("menu");
+            return;
           }
+          setMessage(getText("extracting_from_project", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          for (const p of platformsToRun) {
+            const existing = getPlatformSkills(p, "project");
+            if (!existing.includes(item.value)) continue;
+            try {
+              await extractSkill(item.value, p, "project", projectRoot);
+            } catch (e) {
+              errors.push(`${p}: ${e.message}`);
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_extract_project", lang, item.value));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
         }
         setActiveTab("menu");
         return;
       }
+      let errors = [];
       if (selectedScope === "global") {
-        setMessage(getText("extracting", lang, item.value, selectedPlatform));
-        try {
-          await extractAgent(item.value, selectedPlatform, platforms);
-          setMessage(getText("success_extract", lang, item.value));
-        } catch (e) {
-          setMessage(getText("error_prefix", lang) + e.message);
+        if (item.value === ALL_ITEMS_VALUE) {
+          setMessage(getText("extracting", lang, getText("agent_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          const extracted = new Set();
+          for (const p of platformsToRun) {
+            const existing = getPlatformAgents(p);
+            for (const agentName of existing) {
+              if (extracted.has(agentName)) continue;
+              try {
+                await extractAgent(agentName, p, platforms);
+                extracted.add(agentName);
+              } catch (e) {
+                errors.push(`${p}/${agentName}: ${e.message}`);
+              }
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_extract", lang, getText("agent_all", lang)));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+          setActiveTab("menu");
+          return;
         }
+        setMessage(getText("extracting", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+        for (const p of platformsToRun) {
+          const existing = getPlatformAgents(p);
+          if (!existing.includes(item.value)) continue;
+          try {
+            await extractAgent(item.value, p, platforms);
+          } catch (e) {
+            errors.push(`${p}: ${e.message}`);
+          }
+        }
+        if (errors.length === 0) setMessage(getText("success_extract", lang, item.value));
+        else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
       } else {
         if (!projectRoot) {
           setMessage(getText("project_root_not_detected", lang));
           setActiveTab("menu");
           return;
         }
-        setMessage(getText("extracting_from_project", lang, item.value, selectedPlatform));
-        try {
-          await extractAgentFromProject(item.value, selectedPlatform, projectRoot);
-          setMessage(getText("success_extract_project", lang, item.value));
-        } catch (e) {
-          setMessage(getText("error_prefix", lang) + e.message);
+        if (item.value === ALL_ITEMS_VALUE) {
+          setMessage(getText("extracting_from_project", lang, getText("agent_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          const extracted = new Set();
+          for (const p of platformsToRun) {
+            const existing = getProjectPlatformAgents(p);
+            for (const agentName of existing) {
+              if (extracted.has(agentName)) continue;
+              try {
+                await extractAgentFromProject(agentName, p, projectRoot);
+                extracted.add(agentName);
+              } catch (e) {
+                errors.push(`${p}/${agentName}: ${e.message}`);
+              }
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_extract_project", lang, getText("agent_all", lang)));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+          setActiveTab("menu");
+          return;
         }
+        setMessage(getText("extracting_from_project", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+        for (const p of platformsToRun) {
+          const existing = getProjectPlatformAgents(p);
+          if (!existing.includes(item.value)) continue;
+          try {
+            await extractAgentFromProject(item.value, p, projectRoot);
+          } catch (e) {
+            errors.push(`${p}: ${e.message}`);
+          }
+        }
+        if (errors.length === 0) setMessage(getText("success_extract_project", lang, item.value));
+        else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
       }
       setActiveTab("menu");
     }
@@ -771,53 +888,144 @@ var App = () => {
   const handleUninstallSelectAgent = async (item) => {
     if (item.value === "back") setActiveTab("uninstall_select_scope");
     else {
+      const platformsToRun = selectedPlatform === "all" ? getDeployPlatformsForScope(selectedScope) : [selectedPlatform];
       if (mode === "skill") {
+        let errors = [];
         if (selectedScope === "global") {
-          setMessage(getText("uninstalling", lang, item.value, selectedPlatform));
-          try {
-            await uninstallSkill(item.value, selectedPlatform, "global", projectRoot);
-            setMessage(getText("success_uninstall", lang, item.value));
-          } catch (e) {
-            setMessage(getText("error_prefix", lang) + e.message);
+          if (item.value === ALL_ITEMS_VALUE) {
+            setMessage(getText("uninstalling", lang, getText("skill_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+            for (const p of platformsToRun) {
+              const existing = getPlatformSkills(p, "global");
+              for (const skillName of existing) {
+                try {
+                  await uninstallSkill(skillName, p, "global", projectRoot || undefined);
+                } catch (e) {
+                  errors.push(`${p}/${skillName}: ${e.message}`);
+                }
+              }
+            }
+            if (errors.length === 0) setMessage(getText("success_uninstall", lang, getText("skill_all", lang)));
+            else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+            setActiveTab("menu");
+            return;
           }
+          setMessage(getText("uninstalling", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          for (const p of platformsToRun) {
+            const existing = getPlatformSkills(p, "global");
+            if (!existing.includes(item.value)) continue;
+            try {
+              await uninstallSkill(item.value, p, "global", projectRoot || undefined);
+            } catch (e) {
+              errors.push(`${p}: ${e.message}`);
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_uninstall", lang, item.value));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
         } else {
           if (!projectRoot) {
             setMessage(getText("project_root_not_detected", lang));
             setActiveTab("menu");
             return;
           }
-          setMessage(getText("uninstalling_from_project", lang, item.value, selectedPlatform));
-          try {
-            await uninstallSkill(item.value, selectedPlatform, "project", projectRoot);
-            setMessage(getText("success_uninstall_project", lang, item.value));
-          } catch (e) {
-            setMessage(getText("error_prefix", lang) + e.message);
+          if (item.value === ALL_ITEMS_VALUE) {
+            setMessage(getText("uninstalling_from_project", lang, getText("skill_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+            for (const p of platformsToRun) {
+              const existing = getPlatformSkills(p, "project");
+              for (const skillName of existing) {
+                try {
+                  await uninstallSkill(skillName, p, "project", projectRoot);
+                } catch (e) {
+                  errors.push(`${p}/${skillName}: ${e.message}`);
+                }
+              }
+            }
+            if (errors.length === 0) setMessage(getText("success_uninstall_project", lang, getText("skill_all", lang)));
+            else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+            setActiveTab("menu");
+            return;
           }
+          setMessage(getText("uninstalling_from_project", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          for (const p of platformsToRun) {
+            const existing = getPlatformSkills(p, "project");
+            if (!existing.includes(item.value)) continue;
+            try {
+              await uninstallSkill(item.value, p, "project", projectRoot);
+            } catch (e) {
+              errors.push(`${p}: ${e.message}`);
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_uninstall_project", lang, item.value));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
         }
         setActiveTab("menu");
         return;
       }
+      let errors = [];
       if (selectedScope === "global") {
-        setMessage(getText("uninstalling", lang, item.value, selectedPlatform));
-        try {
-          await uninstallAgent(item.value, selectedPlatform, platforms);
-          setMessage(getText("success_uninstall", lang, item.value));
-        } catch (e) {
-          setMessage(getText("error_prefix", lang) + e.message);
+        if (item.value === ALL_ITEMS_VALUE) {
+          setMessage(getText("uninstalling", lang, getText("agent_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          for (const p of platformsToRun) {
+            const existing = getPlatformAgents(p);
+            for (const agentName of existing) {
+              try {
+                await uninstallAgent(agentName, p, platforms);
+              } catch (e) {
+                errors.push(`${p}/${agentName}: ${e.message}`);
+              }
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_uninstall", lang, getText("agent_all", lang)));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+          setActiveTab("menu");
+          return;
         }
+        setMessage(getText("uninstalling", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+        for (const p of platformsToRun) {
+          const existing = getPlatformAgents(p);
+          if (!existing.includes(item.value)) continue;
+          try {
+            await uninstallAgent(item.value, p, platforms);
+          } catch (e) {
+            errors.push(`${p}: ${e.message}`);
+          }
+        }
+        if (errors.length === 0) setMessage(getText("success_uninstall", lang, item.value));
+        else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
       } else {
         if (!projectRoot) {
           setMessage(getText("project_root_not_detected", lang));
           setActiveTab("menu");
           return;
         }
-        setMessage(getText("uninstalling_from_project", lang, item.value, selectedPlatform));
-        try {
-          await uninstallAgentFromProject(item.value, selectedPlatform, projectRoot);
-          setMessage(getText("success_uninstall_project", lang, item.value));
-        } catch (e) {
-          setMessage(getText("error_prefix", lang) + e.message);
+        if (item.value === ALL_ITEMS_VALUE) {
+          setMessage(getText("uninstalling_from_project", lang, getText("agent_all", lang), selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+          for (const p of platformsToRun) {
+            const existing = getProjectPlatformAgents(p);
+            for (const agentName of existing) {
+              try {
+                await uninstallAgentFromProject(agentName, p, projectRoot);
+              } catch (e) {
+                errors.push(`${p}/${agentName}: ${e.message}`);
+              }
+            }
+          }
+          if (errors.length === 0) setMessage(getText("success_uninstall_project", lang, getText("agent_all", lang)));
+          else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
+          setActiveTab("menu");
+          return;
         }
+        setMessage(getText("uninstalling_from_project", lang, item.value, selectedPlatform === "all" ? getText("platform_all", lang) : selectedPlatform));
+        for (const p of platformsToRun) {
+          const existing = getProjectPlatformAgents(p);
+          if (!existing.includes(item.value)) continue;
+          try {
+            await uninstallAgentFromProject(item.value, p, projectRoot);
+          } catch (e) {
+            errors.push(`${p}: ${e.message}`);
+          }
+        }
+        if (errors.length === 0) setMessage(getText("success_uninstall_project", lang, item.value));
+        else setMessage(`${getText("error_prefix", lang)}${errors.join("; ")}`);
       }
       setActiveTab("menu");
     }
@@ -882,12 +1090,13 @@ var App = () => {
   const toLegacyPlatformName = (name) => {
     if (name === "claude_code") return "claude";
     if (name === "kilo_code") return "kilocode";
+    if (name === "kilo_code_vscode") return "kilocode";
     if (name === "github_copilot") return "copilot";
     return name;
   };
   const toSchemaPlatformName = (name) => {
     if (name === "claude") return "claude_code";
-    if (name === "kilocode") return "kilo_code";
+    if (name === "kilocode") return "kilo_code_vscode";
     if (name === "copilot") return "github_copilot";
     return name;
   };
@@ -900,16 +1109,36 @@ var App = () => {
     if (path.isAbsolute(target)) return false;
     return true;
   };
+  const isAgentProjectScopeSupported = (schema) => {
+    return isProjectScopeSupported(schema, "agent_definition", "agents") || isProjectScopeSupported(schema, "custom_modes", "custom_modes");
+  };
   const getDeployPlatformsForScope = (scope) => {
     const base = mode === "skill" ? skillPlatforms : agentPlatforms;
-    const outputKey = mode === "skill" ? "skills" : "agent_definition";
-    const projectPathKey = mode === "skill" ? "skills" : "agents";
     const filtered = scope === "project"
-      ? base.filter((plt) => isProjectScopeSupported(plt, outputKey, projectPathKey))
+      ? base.filter((plt) => {
+        if (mode === "skill") return isProjectScopeSupported(plt, "skills", "skills");
+        return isAgentProjectScopeSupported(plt);
+      })
       : base;
     return filtered.map((plt) => toLegacyPlatformName(plt.name));
   };
-  const allPlatforms = registry.getAllPlatforms();
+  const getPlatformSortOrder = (plt) => {
+    const raw = plt ? plt.sort_order : void 0;
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (typeof raw === "string") {
+      const n = Number(raw.trim());
+      if (Number.isFinite(n)) return n;
+    }
+    return Number.POSITIVE_INFINITY;
+  };
+  const allPlatforms = [...registry.getAllPlatforms()].sort((a, b) => {
+    const ai = getPlatformSortOrder(a);
+    const bi = getPlatformSortOrder(b);
+    if (ai !== bi) return ai - bi;
+    const an = (a.name || "").toLowerCase();
+    const bn = (b.name || "").toLowerCase();
+    return an.localeCompare(bn);
+  });
   const agentPlatforms = allPlatforms.filter((plt) => Array.isArray(plt.features) && plt.features.includes("agents"));
   const skillPlatforms = allPlatforms.filter((plt) => Array.isArray(plt.features) && plt.features.includes("skills"));
   const deployPlatforms = mode === "skill" ? skillPlatforms : agentPlatforms;
@@ -955,6 +1184,7 @@ var App = () => {
     { label: getText("menu_back", lang), value: "back" }
   ];
   const platformItems = [
+    { label: getText("platform_all", lang), value: "all" },
     ...deployPlatforms.map((plt) => ({ label: plt.display_name || plt.name, value: toLegacyPlatformName(plt.name) })),
     { label: getText("menu_back", lang), value: "back" }
   ];
@@ -966,9 +1196,8 @@ var App = () => {
   const isProjectScopeAvailable = () => {
     if (!selectedPlatform || selectedPlatform === "all") return true;
     const schema = allPlatforms.find((plt) => plt.name === toSchemaPlatformName(selectedPlatform));
-    const outputKey = mode === "skill" ? "skills" : "agent_definition";
-    const projectPathKey = mode === "skill" ? "skills" : "agents";
-    return isProjectScopeSupported(schema, outputKey, projectPathKey);
+    if (mode === "skill") return isProjectScopeSupported(schema, "skills", "skills");
+    return isAgentProjectScopeSupported(schema);
   };
   const getScopeItems = () => {
     const items = [{ label: getText("scope_global", lang), value: "global" }];
@@ -995,20 +1224,64 @@ var App = () => {
     return globalSkills[key] || [];
   };
   const getExtractSelectItems = () => {
-    const items = mode === "skill"
-      ? getPlatformSkills(selectedPlatform, selectedScope)
-      : selectedScope === "global"
-        ? getPlatformAgents(selectedPlatform)
-        : getProjectPlatformAgents(selectedPlatform);
-    return [...items.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
+    const items = (() => {
+      if (selectedPlatform === "all") {
+        const platformsToRun = getDeployPlatformsForScope(selectedScope);
+        const seen = new Set();
+        const result = [];
+        for (const p of platformsToRun) {
+          const list = mode === "skill"
+            ? getPlatformSkills(p, selectedScope)
+            : selectedScope === "global"
+              ? getPlatformAgents(p)
+              : getProjectPlatformAgents(p);
+          for (const name of list) {
+            if (seen.has(name)) continue;
+            seen.add(name);
+            result.push(name);
+          }
+        }
+        return result;
+      }
+      return mode === "skill"
+        ? getPlatformSkills(selectedPlatform, selectedScope)
+        : selectedScope === "global"
+          ? getPlatformAgents(selectedPlatform)
+          : getProjectPlatformAgents(selectedPlatform);
+    })();
+    const allLabelKey = mode === "skill" ? "skill_all" : "agent_all";
+    const allItem = items.length > 0 ? [{ label: getText(allLabelKey, lang), value: ALL_ITEMS_VALUE }] : [];
+    return [...allItem, ...items.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
   };
   const getUninstallSelectItems = () => {
-    const items = mode === "skill"
-      ? getPlatformSkills(selectedPlatform, selectedScope)
-      : selectedScope === "global"
-        ? getPlatformAgents(selectedPlatform)
-        : getProjectPlatformAgents(selectedPlatform);
-    return [...items.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
+    const items = (() => {
+      if (selectedPlatform === "all") {
+        const platformsToRun = getDeployPlatformsForScope(selectedScope);
+        const seen = new Set();
+        const result = [];
+        for (const p of platformsToRun) {
+          const list = mode === "skill"
+            ? getPlatformSkills(p, selectedScope)
+            : selectedScope === "global"
+              ? getPlatformAgents(p)
+              : getProjectPlatformAgents(p);
+          for (const name of list) {
+            if (seen.has(name)) continue;
+            seen.add(name);
+            result.push(name);
+          }
+        }
+        return result;
+      }
+      return mode === "skill"
+        ? getPlatformSkills(selectedPlatform, selectedScope)
+        : selectedScope === "global"
+          ? getPlatformAgents(selectedPlatform)
+          : getProjectPlatformAgents(selectedPlatform);
+    })();
+    const allLabelKey = mode === "skill" ? "skill_all" : "agent_all";
+    const allItem = items.length > 0 ? [{ label: getText(allLabelKey, lang), value: ALL_ITEMS_VALUE }] : [];
+    return [...allItem, ...items.map((a) => ({ label: a, value: a })), { label: getText("menu_back", lang), value: "back" }];
   };
   const extractSelectLabel = mode === "skill"
     ? getText("extract_select_skill", lang)
@@ -1017,7 +1290,7 @@ var App = () => {
     ? getText("uninstall_select_skill", lang)
     : getText("uninstall_select_agent", lang);
   if (!isLangSelected) {
-    return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", alignItems: "center", justifyContent: "center", height: 15, borderStyle: "double", borderColor: "magenta", padding: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true, color: "magenta", marginBottom: 1 }, getText("lang_select_title", lang)), /* @__PURE__ */ React.createElement(Text, { color: "cyan", marginBottom: 1 }, getText("lang_select_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: startupLangItems, onSelect: handleStartupLangSelect }));
+    return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", alignItems: "center", justifyContent: "center", height: 15, borderStyle: "double", borderColor: "magenta", padding: 1 }, /* @__PURE__ */ React.createElement(Text, { bold: true, color: "magenta", marginBottom: 1 }, getText("lang_select_title", lang)), /* @__PURE__ */ React.createElement(Text, { color: "cyan", marginBottom: 1 }, getText("lang_select_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: startupLangItems, limit: getSelectLimit(), onSelect: handleStartupLangSelect }));
   }
 
   // V2.0 Render Logic
@@ -1034,6 +1307,7 @@ var App = () => {
               { label: getText("menu_settings", lang), value: "settings" },
               { label: getText("menu_exit", lang), value: "exit" }
             ],
+            limit: getSelectLimit(),
             onSelect: handleModeSelect
           })
         ),
@@ -1047,29 +1321,32 @@ var App = () => {
     : /* @__PURE__ */ React.createElement(Dashboard, { platformSummaries, projectRoot, lang });
 
   return /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", padding: 1 }, /* @__PURE__ */ React.createElement(Header, { lang }), dashboard, /* @__PURE__ */ React.createElement(MessageLog, { message }), /* @__PURE__ */ React.createElement(Box, { flexDirection: "column", marginTop: 1 },
-    activeTab === "menu" && mode === 'agent' && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: menuItems, onSelect: handleMenuSelect })),
-    activeTab === "menu" && mode === 'skill' && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: skillMenuItems, onSelect: handleSkillMenuSelect })),
+    activeTab === "menu" && mode === 'agent' && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: menuItems, limit: getSelectLimit(), onSelect: handleMenuSelect })),
+    activeTab === "menu" && mode === 'skill' && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_prompt", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: skillMenuItems, limit: getSelectLimit(), onSelect: handleSkillMenuSelect })),
 
-    activeTab === "deploy_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_agent", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployAgentItems, onSelect: handleDeploySelectAgent })),
+    activeTab === "deploy_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_agent", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployAgentItems, limit: getSelectLimit(), onSelect: handleDeploySelectAgent })),
 
     // Skill specific
-    activeTab === "deploy_select_skill" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_skill", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deploySkillItems, onSelect: handleDeploySelectSkill })),
+    activeTab === "deploy_select_skill" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_skill", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deploySkillItems, limit: getSelectLimit(), onSelect: handleDeploySelectSkill })),
 
-    activeTab === "deploy_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployPlatformItems, onSelect: handleDeploySelectPlatform })), activeTab === "deploy_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), onSelect: handleDeploySelectScope })),
+    activeTab === "deploy_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("deploy_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: deployPlatformItems, limit: getSelectLimit(), onSelect: handleDeploySelectPlatform })), activeTab === "deploy_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), limit: getSelectLimit(), onSelect: handleDeploySelectScope })),
 
     activeTab === "deploy_confirm" && confirmationQueue.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "red", bold: true }, getText("confirm_deploy_title", lang)), /* @__PURE__ */ React.createElement(Text, { color: "yellow", marginBottom: 1 }, getText("confirm_deploy_message", lang, confirmationQueue[0].agent, confirmationQueue[0].platform === "all" ? getText("platform_all", lang) : confirmationQueue[0].platform)), /* @__PURE__ */ React.createElement(SelectInput, {
       items: [
         { label: getText("confirm_yes", lang), value: "yes" },
         { label: getText("confirm_no", lang), value: "no" }
       ],
+      limit: getSelectLimit(),
       onSelect: handleDeployConfirm
-    })), activeTab === "extract_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("extract_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, onSelect: handleExtractSelectPlatform })), activeTab === "extract_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), onSelect: handleExtractSelectScope })), activeTab === "extract_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, extractSelectLabel), /* @__PURE__ */ React.createElement(SelectInput, {
+    })), activeTab === "extract_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("extract_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, limit: getSelectLimit(), onSelect: handleExtractSelectPlatform })), activeTab === "extract_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), limit: getSelectLimit(), onSelect: handleExtractSelectScope })), activeTab === "extract_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, extractSelectLabel), /* @__PURE__ */ React.createElement(SelectInput, {
       items: getExtractSelectItems(),
+      limit: getSelectLimit(),
       onSelect: handleExtractSelectAgent
-    })), activeTab === "uninstall_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("uninstall_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, onSelect: handleUninstallSelectPlatform })), activeTab === "uninstall_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), onSelect: handleUninstallSelectScope })), activeTab === "uninstall_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, uninstallSelectLabel), /* @__PURE__ */ React.createElement(SelectInput, {
+    })), activeTab === "uninstall_select_platform" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("uninstall_select_platform", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: platformItems, limit: getSelectLimit(), onSelect: handleUninstallSelectPlatform })), activeTab === "uninstall_select_scope" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("scope_select", lang)), /* @__PURE__ */ React.createElement(SelectInput, { items: getScopeItems(), limit: getSelectLimit(), onSelect: handleUninstallSelectScope })), activeTab === "uninstall_select_agent" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, uninstallSelectLabel), /* @__PURE__ */ React.createElement(SelectInput, {
       items: getUninstallSelectItems(),
+      limit: getSelectLimit(),
       onSelect: handleUninstallSelectAgent
-    })), activeTab === "settings_menu" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_settings", lang), ":"), /* @__PURE__ */ React.createElement(SelectInput, { items: settingsMenuItems, onSelect: handleSettingsSelect }))));
+    })), activeTab === "settings_menu" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Text, { color: "cyan" }, getText("menu_settings", lang), ":"), /* @__PURE__ */ React.createElement(SelectInput, { items: settingsMenuItems, limit: getSelectLimit(), onSelect: handleSettingsSelect }))));
 };
 process.on("exit", () => {
   process.stdout.write("\x1B[2J\x1B[3J\x1B[H");

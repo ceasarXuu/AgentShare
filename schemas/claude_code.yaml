@@ -1,5 +1,6 @@
 name: claude_code
 display_name: Claude Code
+sort_order: 2
 requires_restart: true
 
 target_detection:

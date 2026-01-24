@@ -1,5 +1,6 @@
 name: kilo_code_vscode
 display_name: Kilo Code Plugin (VS Code)
+sort_order: 3
 requires_restart: true
 
 target_detection:
@@ -32,16 +33,18 @@ project_paths:
   skills: .kilocode/skills
 
 features:
+  - agents
   - skills
   - mcps
   - tools
 
 capabilities:
   - id: agents.primary
-    status: unsupported
-    platform_term: null
+    status: supported
+    platform_term: custom mode
     neutral_semantics: 可由用户直接选择的主对话角色
-    evidence: []
+    evidence:
+      - https://kilo.ai/docs/agent-behavior/custom-modes
   - id: agents.subagent
     status: unsupported
     platform_term: null
